@@ -52,6 +52,7 @@ function App() {
   const [fileName, setFileName] = createSignal('README.md');
   const [panelMode, setPanelMode] = createSignal<PanelMode>('editor');
   const [activeTool, setActiveTool] = createSignal<ToolPanel>('insert');
+  const [sidebarCollapsed, setSidebarCollapsed] = createSignal(false);
   const [saved, setSaved] = createSignal(true);
   const [draggingFile, setDraggingFile] = createSignal(false);
   const [treePaths, setTreePaths] = createSignal('src/App.tsx\nsrc/lib/readme.ts\npublic/favicon.ico\nREADME.md');
@@ -181,7 +182,8 @@ function App() {
     <div class="app-shell" onDragEnter={(event) => { event.preventDefault(); setDraggingFile(true); }} onDragOver={(event) => event.preventDefault()} onDragLeave={(event) => { if (event.currentTarget === event.target) setDraggingFile(false); }} onDrop={(event) => { event.preventDefault(); setDraggingFile(false); importFile(event.dataTransfer?.files[0]); }}>
       <header class="topbar">
         <div class="brand" aria-label="Readme Studio"><span class="brand-mark">R/</span><span>Readme Studio</span></div>
-        <div class="document-status"><span class="file-dot" aria-hidden="true" /><span class="file-name">{fileName()}</span><span class="save-status">{saved() ? 'Saved locally' : 'Saving…'}</span></div>
+        <div class="document-status"><span class="file-dot" aria-hidden="true" /><span class="file-name">{fileName()}</span><span class="metadata-separator" aria-hidden="true">·</span><span class="save-status">{saved() ? 'Saved locally' : 'Saving…'}</span><span class="metadata-separator" aria-hidden="true">·</span><span class="word-count">{stats().words} words</span></div>
+        <div class="view-switcher" aria-label="Workspace view">{(['editor', 'preview'] as const).map((mode) => <button class={{ active: panelMode() === mode }} onClick={() => setPanelMode(mode)}>{mode}</button>)}</div>
         <div class="top-actions">
           <input ref={fileInput} class="visually-hidden" type="file" accept=".md,.markdown,text/markdown" onChange={(event) => importFile(event.currentTarget.files?.[0])} />
           <button class="button ghost" onClick={resetReadme}>New</button>
@@ -190,15 +192,29 @@ function App() {
         </div>
       </header>
 
-      <div class="studio-body">
-        <aside class="toolbox" aria-label="README tools">
-          <nav class="tool-tabs" aria-label="Tool categories">
-            <button class={{ active: activeTool() === 'insert' }} onClick={() => setActiveTool('insert')}><span aria-hidden="true">＋</span><small>Insert</small></button>
-            <button class={{ active: activeTool() === 'badge' }} onClick={() => setActiveTool('badge')}><span aria-hidden="true">◆</span><small>Badges</small></button>
-            <button class={{ active: activeTool() === 'utilities' }} onClick={() => setActiveTool('utilities')}><span aria-hidden="true">⌁</span><small>Utilities</small></button>
-          </nav>
+      <div class={['studio-body', { 'sidebar-collapsed': sidebarCollapsed() }]}>
+        <aside class={['sidebar', { collapsed: sidebarCollapsed() }]} aria-label="README tools">
+          <div class="sidebar-header">
+            <Show when={!sidebarCollapsed()}><span>Tools</span></Show>
+            <button
+              class="sidebar-toggle"
+              type="button"
+              aria-label={sidebarCollapsed() ? 'Expand tools sidebar' : 'Collapse tools sidebar'}
+              aria-expanded={!sidebarCollapsed()}
+              onClick={() => setSidebarCollapsed((collapsed) => !collapsed)}
+            >
+              <span aria-hidden="true">{sidebarCollapsed() ? '›' : '‹'}</span>
+            </button>
+          </div>
 
-          <div class="tool-content">
+          <Show when={!sidebarCollapsed()}>
+            <nav class="sidebar-tabs" aria-label="Tool categories">
+              <button class={{ active: activeTool() === 'insert' }} onClick={() => setActiveTool('insert')}>Insert</button>
+              <button class={{ active: activeTool() === 'badge' }} onClick={() => setActiveTool('badge')}>Badges</button>
+              <button class={{ active: activeTool() === 'utilities' }} onClick={() => setActiveTool('utilities')}>Utilities</button>
+            </nav>
+
+            <div class="tool-content">
             <Show when={activeTool() === 'insert'}>
               <p class="eyebrow">Building blocks</p><h2>Insert</h2><p class="tool-description">Drop familiar README patterns at your cursor.</p>
               <div class="insert-grid">{insertHelpers.map((item) => <button onClick={() => applyInsertion(item.before, item.after, item.placeholder)}><span>{item.hint}</span>{item.label}</button>)}</div>
@@ -225,14 +241,14 @@ function App() {
               <section class="utility-card"><h3>Project tree</h3><p>Paste one file path per line.</p><textarea value={treePaths()} onInput={(event) => setTreePaths(event.currentTarget.value)} aria-label="Project file paths" /><button onClick={insertTree}>Generate & insert</button></section>
               <section class="stats-card" aria-label="Editor statistics"><div><strong>{stats().words}</strong><span>Words</span></div><div><strong>{stats().lines}</strong><span>Lines</span></div><div><strong>{stats().characters}</strong><span>Chars</span></div></section>
             </Show>
-          </div>
+            </div>
+          </Show>
         </aside>
 
         <main class="workbench">
-          <div class="viewbar"><div class="view-switcher" aria-label="Workspace view">{(['editor', 'preview'] as const).map((mode) => <button class={{ active: panelMode() === mode }} onClick={() => setPanelMode(mode)}>{mode}</button>)}</div><span>Markdown · {stats().words} words</span></div>
           <div class={['workspace', panelMode()]}>
-            <section class={['editor-pane', { hidden: panelMode() === 'preview' }]}><div class="pane-label"><span>EDITOR</span><span>UTF-8</span></div><textarea ref={(element) => { editor = element; editor.value = STARTER_README; }} onInput={(event) => setMarkdown(event.currentTarget.value)} onKeyDown={handleKeyboard} spellcheck={false} aria-label="Markdown editor" /></section>
-            <section class={['preview-pane', { hidden: panelMode() === 'editor' }]}><div class="pane-label"><span>PREVIEW</span><span>GITHUB STYLE</span></div><div class="preview-scroll"><Show when={markdown().trim()} fallback={<div class="empty-state"><span>R/</span><h2>Your README starts here</h2><p>Write Markdown in the editor or import a file to see it rendered.</p></div>}><article class="markdown-body" innerHTML={renderedMarkdown()} /></Show></div></section>
+            <section class={['editor-pane', { hidden: panelMode() === 'preview' }]}><textarea ref={(element) => { editor = element; editor.value = STARTER_README; }} onInput={(event) => setMarkdown(event.currentTarget.value)} onKeyDown={handleKeyboard} spellcheck={false} aria-label="Markdown editor" /></section>
+            <section class={['preview-pane', { hidden: panelMode() === 'editor' }]}><div class="preview-scroll"><Show when={markdown().trim()} fallback={<div class="empty-state"><span>R/</span><h2>Your README starts here</h2><p>Write Markdown in the editor or import a file to see it rendered.</p></div>}><article class="markdown-body" innerHTML={renderedMarkdown()} /></Show></div></section>
           </div>
         </main>
       </div>
