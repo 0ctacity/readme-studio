@@ -1,4 +1,5 @@
 import { createMemo, createSignal, Show } from 'solid-js';
+import { generateSnakeSvg, getGameSvg } from '../lib/arcade-preview';
 import {
   ARCADE_GAMES,
   CAPSULE_SHAPES,
@@ -212,11 +213,13 @@ export function ProfileInspector(props: ProfileInspectorProps) {
 
         <Show when={props.tool === 'snake'}>
           <p class="workflow-note"><strong>Requires workflow</strong>Export will include <code>.github/workflows/snake.yml</code>.</p>
+          <div class="game-live-preview" innerHTML={generateSnakeSvg({ username: username() || 'octocat', theme: 'dark' })} />
         </Show>
 
         <Show when={props.tool === 'arcade'}>
           <label>Game<select value={arcadeGame()} onChange={(event) => setArcadeGame(event.currentTarget.value as ArcadeGame)}>{ARCADE_GAMES.map((game) => <option value={game.id}>{game.label}</option>)}</select></label>
           <p class="workflow-note"><strong>Requires workflow</strong>Export will include <code>.github/workflows/arcade.yml</code>.</p>
+          <div class="game-live-preview" innerHTML={getGameSvg(arcadeGame(), { username: username() || 'octocat', theme: 'dark' })} />
         </Show>
 
         <Show when={props.tool === 'medium'}>

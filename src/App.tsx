@@ -3,9 +3,11 @@ import { marked } from 'marked';
 import { createEffect, createMemo, createSignal, onSettled, Show } from 'solid-js';
 import './App.css';
 import { ProfileInspector } from './components/ProfileInspector';
+import { getGameDataUri } from './lib/arcade-preview';
 import {
   PROFILE_TOOL_CATALOG,
   getRequiredProfileFiles,
+  type ArcadeGame,
   type ProfileToolId,
 } from './lib/profile';
 import {
@@ -77,6 +79,24 @@ const shieldFieldMeta: Record<ShieldBadgeInputKey, { readonly label: string; rea
   docsProject: { label: 'Read the Docs project', placeholder: 'project-slug' },
 };
 
+function preparePreviewMarkdown(raw: string): string {
+  let content = raw;
+
+  // Replace snake raw GitHub URLs with simulated animated SVG Data URI in preview
+  content = content.replace(
+    /https:\/\/raw\.githubusercontent\.com\/([^/]+)\/[^/]+\/output\/snake(-dark)?\.svg/g,
+    (_, user, dark) => getGameDataUri('snake', { username: user, theme: dark ? 'dark' : 'light' }),
+  );
+
+  // Replace arcade game raw GitHub URLs with simulated animated SVG Data URI in preview
+  content = content.replace(
+    /https:\/\/raw\.githubusercontent\.com\/([^/]+)\/[^/]+\/output\/(pacman|breakout|galaga|puzzle-bobble|bomberman)-contribution-graph(-dark)?\.svg/g,
+    (_, user, game: ArcadeGame, dark) => getGameDataUri(game, { username: user, theme: dark ? 'dark' : 'light' }),
+  );
+
+  return content;
+}
+
 function App() {
   const [markdown, setMarkdown] = createSignal(STARTER_README);
   const [fileName, setFileName] = createSignal('README.md');
@@ -123,8 +143,12 @@ function App() {
   );
 
   const renderedMarkdown = createMemo(() => {
-    const html = marked.parse(markdown(), { async: false });
-    return DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
+    const previewContent = preparePreviewMarkdown(markdown());
+    const html = marked.parse(previewContent, { async: false });
+    return DOMPurify.sanitize(html, {
+      USE_PROFILES: { html: true },
+      ADD_DATA_URI_TAGS: ['img', 'source'],
+    });
   });
 
   const stats = createMemo(() => {
@@ -401,13 +425,21 @@ function App() {
             </Show>
 
             <Show when={inspectorTab() === 'export'}>
-              <p class="eyebrow">Ready to ship</p><h2>Export</h2><p class="inspector-description">Download the README and any workflow files required by dynamic profile blocks.</p>
-              <div class="export-file"><span>MD</span><div><strong>README.md</strong><small>UTF-8 · {stats().characters} characters</small></div></div>
-              <button class="wide-action" onClick={downloadReadme}>Export README</button>
+              <p class="eyebrow">File output</p><h2>Export</h2><p class="inspector-description">Download your README and any generated automation files.</p>
+              <div class="export-file"><span aria-hidden="true">.MD</span><div><strong>{fileName()}</strong><small>{stats().lines} lines · {stats().words} words</small></div></div>
+              <button class="wide-action" onClick={downloadReadme}>Download README.md</button>
               <Show when={requiredProfileFiles().length}>
-                <div class="workflow-files"><h3>Required workflows</h3>{requiredProfileFiles().map((file) => <button onClick={() => downloadFile(file.path.split('/').at(-1) ?? 'workflow.yml', file.content)}><span>YML</span><div><strong>{file.path}</strong><small>Download and keep this path in your repository.</small></div></button>)}</div>
+                <div class="workflow-files">
+                  <h3>Required workflow files</h3>
+                  {requiredProfileFiles().map((file) => (
+                    <button onClick={() => downloadFile(file.path.split('/').pop() ?? 'workflow.yml', file.content, 'text/yaml;charset=utf-8')}>
+                      <span aria-hidden="true">YML</span>
+                      <div><strong>{file.path}</strong><small>Download for GitHub Actions</small></div>
+                    </button>
+                  ))}
+                </div>
               </Show>
-              <div class="compatibility"><h3>GitHub compatible</h3><p>GFM tables, task lists, inline HTML, details blocks, images, and fenced code are supported.</p></div>
+              <section class="compatibility"><h3>Target environment</h3><p>Optimized for GitHub Flavored Markdown (GFM) and GitHub repository/profile displays.</p></section>
             </Show>
           </div>
         </aside>
@@ -415,7 +447,7 @@ function App() {
         <button class="edge-toggle inspector-toggle" aria-label={inspectorCollapsed() ? 'Expand inspector' : 'Collapse inspector'} aria-expanded={inspectorCollapsed() ? 'false' : 'true'} onClick={() => setInspectorCollapsed((collapsed) => !collapsed)}><span aria-hidden="true">{inspectorCollapsed() ? '‹' : '›'}</span></button>
       </div>
 
-      <Show when={draggingFile()}><div class="drop-overlay"><div><span>↓</span><strong>Drop your Markdown file</strong><small>.md and .markdown</small></div></div></Show>
+      <Show when={draggingFile()}><div class="drop-overlay"><div><span aria-hidden="true">↓</span><strong>Drop your Markdown file here</strong><small>Imports .md and .markdown documents</small></div></div></Show>
     </div>
   );
 }
