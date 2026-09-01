@@ -13,6 +13,50 @@ export interface BadgeOptions {
   readonly link?: string;
 }
 
+export interface ShieldBadgePreset {
+  readonly id: ShieldBadgePresetId;
+  readonly name: string;
+  readonly kind: 'static' | 'dynamic';
+  readonly description: string;
+  readonly fields: readonly ShieldBadgeInputKey[];
+  readonly options: BadgeOptions;
+}
+
+export type ShieldBadgePresetId = 'build' | 'license' | 'version' | 'downloads' | 'coverage' | 'typescript' | 'bun' | 'docs' | 'discord' | 'stars';
+
+export interface ShieldBadgeInputs {
+  readonly repository: string;
+  readonly workflow: string;
+  readonly branch: string;
+  readonly packageName: string;
+  readonly discordServerId: string;
+  readonly docsProject: string;
+}
+
+export type ShieldBadgeInputKey = keyof ShieldBadgeInputs;
+
+export const DEFAULT_SHIELD_BADGE_INPUTS: ShieldBadgeInputs = {
+  repository: '',
+  workflow: '',
+  branch: 'main',
+  packageName: '',
+  discordServerId: '',
+  docsProject: '',
+};
+
+export const SHIELD_BADGE_PRESETS = [
+  { id: 'build', name: 'Build', kind: 'dynamic', description: 'Live GitHub Actions workflow status.', fields: ['repository', 'workflow', 'branch'], options: { label: 'build', message: 'live', color: '2f855a', style: 'flat-square', logo: 'github' } },
+  { id: 'license', name: 'License', kind: 'dynamic', description: 'License detected from a public GitHub repository.', fields: ['repository'], options: { label: 'license', message: 'live', color: '3b82f6', style: 'flat-square', logo: 'github' } },
+  { id: 'version', name: 'Version', kind: 'dynamic', description: 'Latest GitHub release for a repository.', fields: ['repository'], options: { label: 'release', message: 'latest', color: 'e06c3b', style: 'flat-square', logo: 'github' } },
+  { id: 'downloads', name: 'Downloads', kind: 'dynamic', description: 'Monthly downloads for an npm package.', fields: ['packageName'], options: { label: 'downloads', message: 'monthly', color: '7c3aed', style: 'flat-square', logo: 'npm' } },
+  { id: 'coverage', name: 'Coverage', kind: 'dynamic', description: 'Live Codecov result for a public GitHub repository.', fields: ['repository'], options: { label: 'coverage', message: 'live', color: '2f855a', style: 'flat-square', logo: 'codecov' } },
+  { id: 'typescript', name: 'TypeScript', kind: 'static', description: 'Static technology badge.', fields: [], options: { label: 'types', message: 'TypeScript', color: '3178c6', style: 'flat-square', logo: 'typescript' } },
+  { id: 'bun', name: 'Bun', kind: 'static', description: 'Static runtime badge.', fields: [], options: { label: 'runtime', message: 'Bun', color: '14151a', style: 'flat-square', logo: 'bun' } },
+  { id: 'docs', name: 'Docs', kind: 'dynamic', description: 'Current Read the Docs build status.', fields: ['docsProject'], options: { label: 'docs', message: 'live', color: '2563eb', style: 'flat-square', logo: 'readthedocs' } },
+  { id: 'discord', name: 'Discord', kind: 'dynamic', description: 'Live Discord server member status.', fields: ['discordServerId'], options: { label: 'discord', message: 'live', color: '5865f2', style: 'flat-square', logo: 'discord' } },
+  { id: 'stars', name: 'Stars', kind: 'dynamic', description: 'Current GitHub repository star count.', fields: ['repository'], options: { label: 'stars', message: 'live', color: 'd99a20', style: 'flat-square', logo: 'github' } },
+] as const satisfies readonly ShieldBadgePreset[];
+
 interface TreeNode {
   readonly children: Map<string, TreeNode>;
   isFile: boolean;
@@ -133,4 +177,82 @@ export function buildBadgeUrl(options: BadgeOptions): string {
 export function buildBadgeMarkdown(options: BadgeOptions): string {
   const image = `![${options.label}](${buildBadgeUrl(options)})`;
   return options.link?.trim() ? `[${image}](${options.link.trim()})` : image;
+}
+
+function parseRepository(value: string): readonly [string, string] | null {
+  const normalized = value.trim()
+    .replace(/^https?:\/\/github\.com\//, '')
+    .replace(/\.git$/, '')
+    .replace(/^\/+|\/+$/g, '');
+  const parts = normalized.split('/');
+  if (parts.length !== 2 || parts.some((part) => !part)) return null;
+  return [encodeURIComponent(parts[0]), encodeURIComponent(parts[1])];
+}
+
+function withBadgeQuery(path: string, style: string, logo: string, extra?: Readonly<Record<string, string>>): string {
+  const query = new URLSearchParams();
+  Object.entries(extra ?? {}).forEach(([key, value]) => {
+    if (value.trim()) query.set(key, value.trim());
+  });
+  query.set('style', style);
+  query.set('logo', logo);
+  return `https://img.shields.io/${path}?${query.toString()}`;
+}
+
+export function buildShieldPresetUrl(
+  presetId: ShieldBadgePresetId,
+  inputs: ShieldBadgeInputs,
+  style: string,
+): string | null {
+  const repository = parseRepository(inputs.repository);
+  const repositoryPath = repository?.join('/');
+
+  switch (presetId) {
+    case 'build':
+      if (!repositoryPath || !inputs.workflow.trim()) return null;
+      return withBadgeQuery(
+        `github/actions/workflow/status/${repositoryPath}/${encodeURIComponent(inputs.workflow.trim())}`,
+        style,
+        'github',
+        { branch: inputs.branch },
+      );
+    case 'license':
+      return repositoryPath ? withBadgeQuery(`github/license/${repositoryPath}`, style, 'github') : null;
+    case 'version':
+      return repositoryPath ? withBadgeQuery(`github/v/release/${repositoryPath}`, style, 'github') : null;
+    case 'downloads':
+      return inputs.packageName.trim()
+        ? withBadgeQuery(`npm/dm/${encodeURIComponent(inputs.packageName.trim())}`, style, 'npm')
+        : null;
+    case 'coverage':
+      return repositoryPath ? withBadgeQuery(`codecov/c/github/${repositoryPath}`, style, 'codecov') : null;
+    case 'docs':
+      return inputs.docsProject.trim()
+        ? withBadgeQuery(`readthedocs/${encodeURIComponent(inputs.docsProject.trim())}`, style, 'readthedocs')
+        : null;
+    case 'discord':
+      return /^\d+$/.test(inputs.discordServerId.trim())
+        ? withBadgeQuery(`discord/${inputs.discordServerId.trim()}`, style, 'discord')
+        : null;
+    case 'stars':
+      return repositoryPath ? withBadgeQuery(`github/stars/${repositoryPath}`, style, 'github') : null;
+    case 'typescript':
+    case 'bun': {
+      const preset = SHIELD_BADGE_PRESETS.find(({ id }) => id === presetId);
+      return preset ? buildBadgeUrl({ ...preset.options, style }) : null;
+    }
+  }
+}
+
+export function buildShieldPresetMarkdown(
+  presetId: ShieldBadgePresetId,
+  inputs: ShieldBadgeInputs,
+  style: string,
+  link = '',
+): string | null {
+  const preset = SHIELD_BADGE_PRESETS.find(({ id }) => id === presetId);
+  const url = buildShieldPresetUrl(presetId, inputs, style);
+  if (!preset || !url) return null;
+  const image = `![${preset.name}](${url})`;
+  return link.trim() ? `[${image}](${link.trim()})` : image;
 }

@@ -44,6 +44,47 @@ Builds the static production site to `dist/client`.
 
 Serves the production build locally.
 
+## Cloudflare Worker API
+
+The GitHub integration lives in a Hono + TypeScript Worker under `worker/`. The
+frontend remains a static GitHub Pages application; GitHub access tokens are
+exchanged and used only by the Worker.
+
+1. Create a GitHub App and set its callback URL to
+   `http://localhost:8787/auth/github/callback` for local development. Give the
+   app read-only metadata plus read/write Contents and Workflows repository
+   permissions, then let users choose which repositories to install it on.
+2. Copy `.dev.vars.example` to `.dev.vars` and provide the GitHub App client ID,
+   client secret, and a random session secret.
+3. Run `bun run worker:types` after changing `wrangler.jsonc`.
+4. Run `bun run worker:dev` to start the API at `http://localhost:8787`.
+
+The browser starts OAuth with a random `state`, PKCE verifier, and S256 PKCE
+challenge. It validates the returned state, exchanges the temporary code through
+`POST /auth/github/exchange`, and keeps the resulting 30-minute Readme Studio
+session in memory or session storage. The GitHub token is encrypted inside that
+session and is never returned as plaintext.
+
+Worker routes:
+
+- `GET /health`
+- `GET /auth/github/start`
+- `GET /auth/github/callback`
+- `POST /auth/github/exchange`
+- `GET /api/github/user`
+- `GET /api/github/repositories`
+- `GET /api/github/repositories/:owner/:repository/readme`
+- `POST /api/github/publish`
+
+`/api/github/publish` intentionally accepts only `README.md` and up to five
+`.github/workflows/*.yml` or `.yaml` files. GitHub writes are performed serially.
+No D1, KV, Durable Object, or cross-site authentication cookie is required.
+
+Before a future deployment, set the production frontend URL, callback URL, and
+allowed origin in the Worker environment, then store `GITHUB_CLIENT_SECRET` and
+`SESSION_SECRET` with Wrangler secrets. Do not place production secrets in
+`wrangler.jsonc`.
+
 ## The `ssr` flip
 
 Streaming SSR is one boolean: add `ssr: true` next to `start: true` in `vite.config.ts`. `src/App.tsx` and `src/Document.tsx` carry over unchanged — `<HydrationScript />` is already in place in the Document (in client mode it is stripped from the static shell). The build then emits a request handler to `dist/server` instead of a purely static site.
