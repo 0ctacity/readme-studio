@@ -383,7 +383,26 @@ function App() {
     <div class="app-shell" onDragEnter={(event) => { event.preventDefault(); setDraggingFile(true); }} onDragOver={(event) => event.preventDefault()} onDragLeave={(event) => { if (event.currentTarget === event.target) setDraggingFile(false); }} onDrop={(event) => { event.preventDefault(); setDraggingFile(false); importFile(event.dataTransfer?.files[0]); }}>
       <header class="topbar">
         <div class="brand" aria-label="Readme Studio"><span class="brand-mark">R/</span><span>Readme Studio</span></div>
-        <div class="document-status"><span class="file-dot" aria-hidden="true" /><span class="file-name">{fileName()}</span><span class="metadata-separator" aria-hidden="true">·</span><span class="save-status">{saved() ? 'Saved locally' : 'Saving…'}</span></div>
+        <div class="topbar-context">
+          <div class="document-status"><span class="file-dot" aria-hidden="true" /><span class="file-name">{fileName()}</span><span class="metadata-separator" aria-hidden="true">·</span><span class="save-status">{saved() ? 'Saved locally' : 'Saving…'}</span></div>
+          <div class="topbar-workspace-controls">
+            <div class="editor-style-switcher" aria-label="Editor style">
+              <button class={{ active: editorStyle() === 'visual' }} aria-label="Visual editor" onClick={() => setEditorStyle('visual')}>
+                ✨ <span class="control-label">Visual Editor</span>
+              </button>
+              <button class={{ active: editorStyle() === 'plain' }} aria-label="Plain Markdown editor" onClick={() => setEditorStyle('plain')}>
+                📝 <span class="control-label">Plain Markdown</span>
+              </button>
+            </div>
+            <div class="view-switcher" aria-label="Workspace view">
+              {(['editor', 'preview'] as const).map((mode) => (
+                <button class={{ active: panelMode() === mode }} onClick={() => setPanelMode(mode)}>
+                  {mode}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
         <div class="top-actions">
           <input ref={fileInput} class="visually-hidden" type="file" accept=".md,.markdown,text/markdown" onChange={(event) => importFile(event.currentTarget.files?.[0])} />
           
@@ -437,25 +456,6 @@ function App() {
         </aside>
 
         <main class="workbench">
-          <div class="workbench-header">
-            <div class="editor-style-switcher" aria-label="Editor style">
-              <button class={{ active: editorStyle() === 'visual' }} onClick={() => setEditorStyle('visual')}>
-                ✨ Visual Editor
-              </button>
-              <button class={{ active: editorStyle() === 'plain' }} onClick={() => setEditorStyle('plain')}>
-                📝 Plain Markdown
-              </button>
-            </div>
-
-            <div class="view-switcher" aria-label="Workspace view">
-              {(['editor', 'preview'] as const).map((mode) => (
-                <button class={{ active: panelMode() === mode }} onClick={() => setPanelMode(mode)}>
-                  {mode}
-                </button>
-              ))}
-            </div>
-          </div>
-
           <div class={['workspace', panelMode()]}>
             <section class={['editor-pane', { hidden: panelMode() === 'preview' }]}>
               <Show when={editorStyle() === 'visual'} fallback={

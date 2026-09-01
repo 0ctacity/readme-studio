@@ -16,7 +16,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .topbar { height: 62px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 18px; align-items: center; padding-right: 12px; background: var(--ink); color: #f8f7f1; border-bottom: 1px solid #313c36; }
 .brand { height: 100%; display: flex; gap: 11px; align-items: center; padding: 0 18px; font-family: Georgia, serif; font-size: 18px; font-weight: 700; letter-spacing: -.2px; }
 .brand-mark { display: grid; place-items: center; width: 31px; height: 31px; color: var(--ink); background: var(--accent); border-radius: 4px 12px 4px 4px; font: 800 13px/1 ui-monospace, monospace; }
-.document-status { display: flex; align-items: center; gap: 8px; min-width: 0; color: #939d97; font-size: 11px; }
+.topbar-context { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.document-status { display: flex; flex: 1 1 auto; align-items: center; gap: 8px; min-width: 0; color: #939d97; font-size: 11px; }
+.topbar-workspace-controls { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; }
 .file-dot { width: 7px; height: 7px; background: #7fca83; border-radius: 50%; box-shadow: 0 0 0 3px #7fca8322; }
 .file-name { color: #e3e7e3; font: 600 12px/1 ui-monospace, monospace; overflow: hidden; text-overflow: ellipsis; }
 .metadata-separator { color: #59635d; }
@@ -64,8 +66,6 @@ kbd { display: inline-block; min-width: 19px; padding: 2px 4px; margin-right: 2p
 .inspector-collapsed .inspector-toggle { right: 10px; }
 
 .workbench { position: relative; min-width: 0; min-height: 0; background: #cfd2ca; }
-.workbench-header { position: absolute; z-index: 4; top: 10px; left: 16px; right: 16px; display: flex; align-items: center; justify-content: space-between; pointer-events: none; }
-.workbench-header > * { pointer-events: auto; }
 
 .editor-style-switcher { display: flex; align-items: center; gap: 4px; padding: 3px 6px; border: 1px solid #455049; border-radius: 6px; background: #202824; color: #d0d7d2; font-size: 11px; }
 .editor-style-switcher button { padding: 4px 9px; border: 0; border-radius: 4px; background: transparent; color: #9da6a0; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 120ms ease; }
@@ -80,13 +80,13 @@ kbd { display: inline-block; min-width: 19px; padding: 2px 4px; margin-right: 2p
 .editor-pane, .preview-pane { width: 100%; height: 100%; min-width: 0; overflow: hidden; border: 1px solid #c3c7be; border-radius: 4px; background: var(--paper); }
 .editor-pane { background: #1f2924; border-color: #354139; }
 .editor-pane.hidden, .preview-pane.hidden { display: none; }
-.editor-pane textarea { width: 100%; height: 100%; resize: none; padding: 62px clamp(22px, 3vw, 44px) 90px; border: 0; outline: 0; background: #1f2924; color: #e3e7e2; caret-color: var(--accent); font: 13px/1.75 "SFMono-Regular", Consolas, "Liberation Mono", monospace; tab-size: 2; }
+.editor-pane textarea { width: 100%; height: 100%; resize: none; padding: 32px clamp(22px, 3vw, 44px) 90px; border: 0; outline: 0; background: #1f2924; color: #e3e7e2; caret-color: var(--accent); font: 13px/1.75 "SFMono-Regular", Consolas, "Liberation Mono", monospace; tab-size: 2; }
 .editor-pane textarea::selection { background: #ed63384d; }
-.preview-scroll { width: 100%; height: 100%; min-height: 0; overflow: auto; padding: 72px clamp(24px, 5vw, 68px); background: var(--paper); }
+.preview-scroll { width: 100%; height: 100%; min-height: 0; overflow: auto; padding: 32px clamp(24px, 5vw, 68px); background: var(--paper); }
 
 /* Visual Rich Editor Styles */
 .visual-editor-container { width: 100%; height: 100%; display: flex; flex-direction: column; background: var(--paper); }
-.visual-toolbar { height: 46px; border-bottom: 1px solid #d8dcd3; background: #f4f4ec; display: flex; align-items: center; padding: 0 12px; gap: 6px; overflow-x: auto; flex-shrink: 0; padding-left: 200px; }
+.visual-toolbar { height: 46px; border-bottom: 1px solid #d8dcd3; background: #f4f4ec; display: flex; align-items: center; padding: 0 12px; gap: 6px; overflow-x: auto; flex-shrink: 0; }
 .toolbar-group { display: flex; align-items: center; gap: 2px; }
 .toolbar-divider { width: 1px; height: 18px; background: #d0d3ca; margin: 0 4px; }
 .tool-btn { padding: 4px 8px; min-height: 28px; border: 1px solid transparent; border-radius: 4px; background: transparent; color: #434c46; font-size: 11px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 4px; }
@@ -283,8 +283,9 @@ kbd { display: inline-block; min-width: 19px; padding: 2px 4px; margin-right: 2p
   .inspector-toggle { right: 250px; }
 }
 @media (max-width: 900px) {
-  .topbar { grid-template-columns: minmax(0, 1fr) auto; }
+  .topbar { grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; }
   .document-status { display: none; }
+  .topbar-context { justify-content: flex-end; }
   .studio-body, .studio-body.toolbox-collapsed, .studio-body.inspector-collapsed, .studio-body.toolbox-collapsed.inspector-collapsed { grid-template-columns: minmax(0, 1fr); }
   .toolbox-panel, .inspector { position: absolute; z-index: 5; top: 0; bottom: 0; width: min(286px, calc(100vw - 48px)); box-shadow: 0 8px 24px #17211c30; }
   .toolbox-panel { left: 0; }
@@ -303,9 +304,14 @@ kbd { display: inline-block; min-width: 19px; padding: 2px 4px; margin-right: 2p
   .top-actions .ghost:first-of-type { display: none; }
   .top-actions { gap: 4px; }
   .button { padding: 0 10px; }
+  .topbar-workspace-controls { gap: 4px; }
+  .editor-style-switcher { padding: 3px; }
+  .editor-style-switcher button { padding: 4px 7px; }
+  .editor-style-switcher .control-label { display: none; }
+  .view-switcher button { padding: 5px 7px; }
   .studio-body { height: calc(100dvh - 56px); }
   .workspace { padding: 5px; }
-  .preview-scroll { padding: 70px 19px 30px; }
-  .editor-pane textarea { padding: 62px 15px 60px; font-size: 12px; }
+  .preview-scroll { padding: 30px 19px; }
+  .editor-pane textarea { padding: 30px 15px 60px; font-size: 12px; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; } }
