@@ -1,0 +1,55 @@
+# Readme Studio by Octacity — Full Agent Documentation
+
+> Comprehensive specification and technical guide for AI agents interacting with Readme Studio (developed by Octacity).
+
+## Project Overview
+
+- Product Name: Readme Studio
+- Brand / Organization: Octacity (https://github.com/0ctacity)
+- Live Web Application: https://0ctacity.github.io/readme-studio/
+- Repository: https://github.com/0ctacity/readme-studio
+- License: MIT
+- Tech Stack: SolidJS 2.0, TypeScript 5.9, Vite 8.x, Bun
+
+Readme Studio is a client-side web application for creating, editing, and exporting GitHub repository and profile README files.
+
+## Features & Markdown Syntax Generation
+
+### 1. Markdown Editor & GFM Preview
+- Provides dual-pane editing with GitHub Flavored Markdown (GFM) rendering.
+- DOMPurify HTML sanitization with safe data URI support for animated graphics.
+- Automatic draft saving to browser localStorage (`readme-studio:draft`).
+- Drag-and-drop import for `.md` and `.markdown` files.
+- Built-in linting checks for H1 title presence, image alt text accessibility, and duplicate headings.
+
+### 2. Shields.io Badge Builder
+Generates standard and dynamic Shields.io markdown links:
+- CI/CD Workflow: `https://img.shields.io/github/actions/workflow/status/:owner/:repo/:workflow?branch=:branch`
+- Releases: `https://img.shields.io/github/v/release/:owner/:repo`
+- npm Downloads: `https://img.shields.io/npm/dm/:package`
+- License: `https://img.shields.io/badge/License-MIT-blue.svg`
+- Discord: `https://img.shields.io/discord/:id?logo=discord`
+- Read the Docs: `https://img.shields.io/readthedocs/:project`
+
+### 3. GitHub Profile README Suite
+- Capsule Render: Dynamic SVG banners via `https://capsule-render.vercel.app/api?type=:shape&...`
+- Contribution Snake: Slithering snake animation across the contribution grid. Requires `.github/workflows/snake.yml`.
+- Retro Arcade Contribution Graphs: Interactive arcade game animations (Pac-Man, Breakout, Galaga, Puzzle Bobble, Bomberman) using `.github/workflows/arcade.yml`.
+- GitHub Stats: Overview stats, top languages, streak counters, trophies, and activity graphs from `github-readme-stats.vercel.app`, `github-readme-streak-stats.herokuapp.com`, and `github-profile-trophy.vercel.app`.
+- Tech Stack Badges: Skill Icons, Devicons, Simple Icons, and Shields.io icon rows.
+- Social Links: Profile badges for 35+ social networks.
+- View Counters: Profile visitor counter badges via `visitor-badge.laobi.icu` and `count.getloli.com`.
+
+### 4. Productivity Tools
+- Project Tree Generator: Converts line-delimited file path lists into clean directory ASCII trees.
+- Table of Contents Generator: Parses H2–H6 headings and generates slugified, anchored Markdown navigation lists.
+
+## Machine-Readable Endpoints
+
+- Web App Homepage: https://0ctacity.github.io/readme-studio/
+- Agent Index (llms.txt): https://0ctacity.github.io/readme-studio/llms.txt
+- Full Agent Documentation (llms-full.txt): https://0ctacity.github.io/readme-studio/llms-full.txt
+- Sitemap: https://0ctacity.github.io/readme-studio/sitemap.xml
+- Robots: https://0ctacity.github.io/readme-studio/robots.txt
+- Markdown README: https://0ctacity.github.io/readme-studio/README.md
+- 404 Error Recovery: https://0ctacity.github.io/readme-studio/404.html
