@@ -20,11 +20,15 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .file-dot { width: 7px; height: 7px; background: #7fca83; border-radius: 50%; box-shadow: 0 0 0 3px #7fca8322; }
 .file-name { color: #e3e7e3; font: 600 12px/1 ui-monospace, monospace; overflow: hidden; text-overflow: ellipsis; }
 .metadata-separator { color: #59635d; }
-.top-actions { display: flex; gap: 6px; }
-.button { min-height: 34px; padding: 0 13px; border: 1px solid #455049; border-radius: 5px; background: transparent; color: #d9ded9; font-size: 12px; font-weight: 650; cursor: pointer; transition: background-color 120ms ease, border-color 120ms ease; }
+.top-actions { display: flex; align-items: center; gap: 6px; }
+.button { min-height: 34px; padding: 0 13px; border: 1px solid #455049; border-radius: 5px; background: transparent; color: #d9ded9; font-size: 12px; font-weight: 650; cursor: pointer; transition: background-color 120ms ease, border-color 120ms ease; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 .button:hover { background: #29342e; border-color: #5e6963; }
 .button.primary { border-color: var(--accent); background: var(--accent); color: #171b18; }
 .button.primary:hover { background: #f17650; }
+.button.github-btn { background: #24292e; border-color: #444d56; color: #f0f6fc; }
+.button.github-btn:hover { background: #2f363d; border-color: #6a737d; }
+.button.github-btn.connected { border-color: #2ea043; }
+.user-avatar-small { width: 18px; height: 18px; border-radius: 50%; }
 
 .studio-body { position: relative; height: calc(100dvh - 62px); min-height: 0; display: grid; grid-template-columns: 246px minmax(420px, 1fr) 284px; transition: grid-template-columns 160ms ease; }
 .studio-body.toolbox-collapsed { grid-template-columns: 0 minmax(420px, 1fr) 284px; }
@@ -102,6 +106,9 @@ kbd { display: inline-block; min-width: 19px; padding: 2px 4px; margin-right: 2p
 .workflow-note { display: flex; flex-direction: column; gap: 4px; margin: 14px 0 2px; padding: 10px; border-left: 3px solid var(--accent); background: #fff5ef; color: var(--muted); font-size: 9px; line-height: 1.45; }
 .workflow-note strong { color: var(--ink); font-size: 10px; }
 .workflow-note code { overflow-wrap: anywhere; }
+.preview-header-meta { display: flex; justify-content: flex-end; margin-top: 8px; }
+.live-activity-badge { font-size: 9px; font-weight: 700; color: #2ea043; background: #dafbe1; border: 1px solid #85e89d; padding: 2px 7px; border-radius: 12px; }
+.loading-activity-badge { font-size: 9px; font-weight: 700; color: var(--muted); }
 .game-live-preview { margin: 10px 0 6px; border: 1px solid #21262d; border-radius: 4px; overflow: hidden; background: #0d1117; display: block; width: 100%; box-shadow: inset 0 0 0 1px #30363d; }
 .game-live-preview svg { display: block; width: 100%; height: auto; }
 .preset-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; color: #535b56; font-size: 9px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; }
@@ -187,6 +194,54 @@ kbd { display: inline-block; min-width: 19px; padding: 2px 4px; margin-right: 2p
 .drop-overlay span { color: var(--accent); font: 42px/1 monospace; }
 .drop-overlay strong { font: 700 25px Georgia, serif; }
 .drop-overlay small { color: #aeb6b0; }
+
+/* Modal & GitHub Dialog Styling */
+.modal-backdrop { position: fixed; z-index: 50; inset: 0; background: rgba(15, 23, 19, 0.7); backdrop-filter: blur(4px); display: grid; place-items: center; padding: 16px; animation: fadeIn 120ms ease; }
+.modal-dialog { background: #fbfaf5; width: 100%; max-width: 580px; max-height: calc(100vh - 40px); border-radius: 8px; border: 1px solid #c8cbc2; box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35); display: flex; flex-direction: column; overflow: hidden; color: var(--ink); }
+.modal-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: #eeefe8; border-bottom: 1px solid #d3d6cd; }
+.modal-title-group { display: flex; align-items: center; gap: 12px; }
+.github-icon-badge { width: 32px; height: 32px; border-radius: 6px; background: #24292e; color: #fff; font: 800 12px/32px monospace; text-align: center; }
+.modal-header h2 { margin: 0; font: 700 17px Georgia, serif; }
+.connected-user { color: var(--muted); font-size: 11px; }
+.connected-user strong { color: var(--ink); }
+.modal-close { background: none; border: 0; font-size: 18px; color: var(--muted); cursor: pointer; padding: 4px 8px; border-radius: 4px; }
+.modal-close:hover { color: var(--ink); background: #dfe1d9; }
+.modal-tabs { display: flex; border-bottom: 1px solid #d3d6cd; background: #f5f5ee; }
+.modal-tabs button { flex: 1; padding: 11px 16px; border: 0; border-bottom: 2px solid transparent; background: none; font-size: 11px; font-weight: 700; color: var(--muted); cursor: pointer; text-transform: uppercase; }
+.modal-tabs button:hover { color: var(--ink); }
+.modal-tabs button.active { color: var(--accent-dark); border-bottom-color: var(--accent); background: #fbfaf5; }
+.modal-body { padding: 20px; overflow-y: auto; flex: 1; min-height: 0; }
+.modal-footer { padding: 12px 20px; background: #eeefe8; border-top: 1px solid #d3d6cd; display: flex; justify-content: space-between; gap: 8px; }
+.auth-prompt { text-align: center; padding: 36px 24px; }
+.auth-hero { display: flex; flex-direction: column; align-items: center; gap: 10px; max-width: 380px; margin: 0 auto; }
+.auth-icon { font-size: 42px; }
+.auth-hero h3 { margin: 4px 0 0; font: 700 20px Georgia, serif; }
+.auth-hero p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.connect-action { width: 100%; margin-top: 12px; padding: 12px; font-size: 13px; font-weight: 700; }
+.privacy-note { color: #888f8a; font-size: 10px; line-height: 1.4; margin-top: 6px; }
+.modal-alert { padding: 10px 14px; border-radius: 4px; margin-bottom: 14px; font-size: 12px; }
+.modal-alert.error { background: #ffeef0; color: #b31d28; border: 1px solid #f97583; }
+.modal-alert.success { background: #dcffe4; color: #165c26; border: 1px solid #85e89d; }
+.repo-search-bar { display: flex; gap: 8px; margin-bottom: 14px; }
+.repo-search-bar input { flex: 1; padding: 8px 12px; border: 1px solid #cbd0c6; border-radius: 4px; font-size: 12px; background: #fff; }
+.repo-list { display: flex; flex-direction: column; gap: 8px; max-height: 320px; overflow-y: auto; }
+.repo-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; border: 1px solid #d0d3ca; border-radius: 6px; background: #faf9f5; }
+.repo-card:hover { border-color: #9ca39d; background: #fff; }
+.repo-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.repo-name-row { display: flex; align-items: center; gap: 6px; }
+.repo-name-row strong { font-size: 12px; font-family: ui-monospace, monospace; }
+.badge-tag { font-size: 9px; padding: 1px 5px; border-radius: 10px; background: #e4e6de; color: #606862; font-weight: 700; text-transform: uppercase; }
+.repo-desc { margin: 0; color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 320px; }
+.repo-branch code { font-size: 10px; background: #e6e7df; padding: 2px 4px; border-radius: 3px; }
+.publish-form label { display: block; margin-bottom: 12px; font-size: 11px; font-weight: 700; color: #49514c; }
+.publish-form select, .publish-form input { width: 100%; margin-top: 5px; padding: 8px 10px; border: 1px solid #cbd0c6; border-radius: 4px; font-size: 12px; background: #fff; }
+.publish-preview-box { margin-top: 14px; padding: 12px; border: 1px solid #d0d3ca; border-radius: 4px; background: #f5f5ee; font-size: 11px; }
+.publish-preview-box h4 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; color: var(--muted); }
+.publish-preview-box ul { margin: 0; padding-left: 18px; }
+.publish-preview-box code { font-family: ui-monospace, monospace; font-size: 10px; }
+.loading-state, .empty-state-text { text-align: center; color: var(--muted); padding: 24px; font-size: 12px; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
 @media (max-width: 1080px) {
   .studio-body { grid-template-columns: 226px minmax(400px, 1fr) 264px; }

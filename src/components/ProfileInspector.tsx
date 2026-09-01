@@ -1,5 +1,7 @@
-import { createMemo, createSignal, Show } from 'solid-js';
+import { createEffect, createMemo, createSignal, Show } from 'solid-js';
 import { generateSnakeSvg, getGameSvg } from '../lib/arcade-preview';
+import { fetchRealGitHubContributions, type ContributionMatrix } from '../lib/contributions';
+import type { GitHubUser } from '../lib/github';
 import {
   ARCADE_GAMES,
   CAPSULE_SHAPES,
@@ -28,6 +30,8 @@ import {
 
 interface ProfileInspectorProps {
   readonly tool: ProfileToolId;
+  readonly currentUser?: GitHubUser | null;
+  readonly sessionToken?: string;
   readonly onInsert: (markdown: string) => void;
   readonly onReplace: (markdown: string) => void;
 }
@@ -42,7 +46,7 @@ const statsCards: readonly { id: StatsCard; label: string }[] = [
 ];
 
 export function ProfileInspector(props: ProfileInspectorProps) {
-  const [username, setUsername] = createSignal('');
+  const [username, setUsername] = createSignal(props.currentUser?.login ?? '');
   const [align, setAlign] = createSignal<Alignment>('center');
   const [imageUrl, setImageUrl] = createSignal('https://i.imgflip.com/65efzo.gif');
   const [imageAlt, setImageAlt] = createSignal('Profile animation');
@@ -80,6 +84,34 @@ export function ProfileInspector(props: ProfileInspectorProps) {
   const [capsuleFontSize, setCapsuleFontSize] = createSignal(52);
   const [capsuleReverse, setCapsuleReverse] = createSignal(false);
 
+  // Real contribution matrix state
+  const [realMatrix, setRealMatrix] = createSignal<ContributionMatrix | null>(null);
+  const [loadingContributions, setLoadingContributions] = createSignal(false);
+
+  createEffect(() => {
+    if (props.currentUser && !username()) {
+      setUsername(props.currentUser.login);
+    }
+  });
+
+  createEffect(() => {
+    const targetUser = username().trim() || props.currentUser?.login;
+    if (!targetUser) {
+      setRealMatrix(null);
+      return;
+    }
+
+    if (['snake', 'arcade'].includes(props.tool)) {
+      setLoadingContributions(true);
+      fetchRealGitHubContributions(targetUser, props.sessionToken)
+        .then((matrix) => setRealMatrix(matrix))
+        .catch(() => setRealMatrix(null))
+        .finally(() => setLoadingContributions(false));
+    }
+  });
+
+  const effectiveUsername = createMemo(() => username().trim() || props.currentUser?.login || 'octocat');
+
   const generatedMarkdown = createMemo(() => {
     switch (props.tool) {
       case 'profile-image':
@@ -96,7 +128,7 @@ export function ProfileInspector(props: ProfileInspectorProps) {
         return buildSocialLinksMarkdown({ links: socialLinks(), align: align(), style: socialStyle() });
       case 'github-stats':
         return buildGitHubStatsMarkdown({
-          username: username(),
+          username: effectiveUsername(),
           cards: selectedStats(),
           theme: statsTheme(),
           locale: statsLocale(),
@@ -107,7 +139,7 @@ export function ProfileInspector(props: ProfileInspectorProps) {
         });
       case 'profile-views':
         return buildProfileViewsMarkdown({
-          username: username(),
+          username: effectiveUsername(),
           provider: viewProvider(),
           label: viewLabel(),
           leftColor: leftColor(),
@@ -115,9 +147,9 @@ export function ProfileInspector(props: ProfileInspectorProps) {
           align: align(),
         });
       case 'snake':
-        return buildSnakeMarkdown(username());
+        return buildSnakeMarkdown(effectiveUsername());
       case 'arcade':
-        return buildArcadeMarkdown(username(), arcadeGame());
+        return buildArcadeMarkdown(effectiveUsername(), arcadeGame());
       case 'medium':
         return buildMediumMarkdown({ username: mediumUsername(), count: mediumCount(), theme: mediumTheme(), align: align() });
       case 'capsule':
@@ -158,10 +190,10 @@ export function ProfileInspector(props: ProfileInspectorProps) {
     <div class="profile-tool">
       <Show when={props.tool === 'profile-template'}>
         <p class="inspector-description">Start from a complete profile README. Enter a GitHub username first; choosing a template replaces the current document.</p>
-        <label>GitHub username<input value={username()} placeholder="octocat" onInput={(event) => setUsername(event.currentTarget.value)} /></label>
+        <label>GitHub username<input value={username()} placeholder={props.currentUser?.login ?? 'octocat'} onInput={(event) => setUsername(event.currentTarget.value)} /></label>
         <div class="template-list">
           {PROFILE_TEMPLATES.map((template) => (
-            <button disabled={!username().trim()} onClick={() => props.onReplace(template.build(username()))}>
+            <button disabled={!effectiveUsername()} onClick={() => props.onReplace(template.build(effectiveUsername()))}>
               <strong>{template.name}</strong>
               <span>{template.description}</span>
             </button>
@@ -171,32 +203,31 @@ export function ProfileInspector(props: ProfileInspectorProps) {
 
       <Show when={props.tool !== 'profile-template'}>
         <Show when={needsUsername()}>
-          <label>GitHub username<input value={username()} placeholder="octocat" onInput={(event) => setUsername(event.currentTarget.value)} /></label>
+          <label>GitHub username<input value={username()} placeholder={props.currentUser?.login ?? 'octocat'} onInput={(event) => setUsername(event.currentTarget.value)} /></label>
         </Show>
 
         <Show when={props.tool === 'profile-image'}>
           <label>Image or GIF URL<input value={imageUrl()} onInput={(event) => setImageUrl(event.currentTarget.value)} /></label>
-          <label>Alt text<input value={imageAlt()} onInput={(event) => setImageAlt(event.currentTarget.value)} /></label>
-          <label>Height<input type="number" min="1" value={imageHeight()} onInput={(event) => setImageHeight(event.currentTarget.valueAsNumber || 1)} /></label>
+          <div class="field-row"><label>Alt text<input value={imageAlt()} onInput={(event) => setImageAlt(event.currentTarget.value)} /></label><label>Height (px)<input type="number" min="40" max="600" value={imageHeight()} onInput={(event) => setImageHeight(event.currentTarget.valueAsNumber || 40)} /></label></div>
         </Show>
 
         <Show when={props.tool === 'profile-text'}>
-          <label>Text<textarea value={profileText()} onInput={(event) => setProfileText(event.currentTarget.value)} /></label>
-          <label>Element<select value={textTag()} onChange={(event) => setTextTag(event.currentTarget.value as TextTag)}>{(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p'] as const).map((tag) => <option value={tag}>{tag.toUpperCase()}</option>)}</select></label>
+          <label>Profile text<textarea value={profileText()} onInput={(event) => setProfileText(event.currentTarget.value)} /></label>
+          <label>HTML tag<select value={textTag()} onChange={(event) => setTextTag(event.currentTarget.value as TextTag)}><option value="h1">H1 Heading</option><option value="h2">H2 Subtitle</option><option value="h3">H3 Section</option><option value="p">Paragraph</option></select></label>
         </Show>
 
         <Show when={props.tool === 'tech-stack'}>
-          <p class="inspector-description">Enter technology names separated by commas.</p>
-          <label>Technologies<textarea value={technologies()} onInput={(event) => setTechnologies(event.currentTarget.value)} /></label>
+          <label>Technologies (comma separated)<textarea value={technologies()} onInput={(event) => setTechnologies(event.currentTarget.value)} /></label>
           <label>Icon provider<select value={techProvider()} onChange={(event) => setTechProvider(event.currentTarget.value as TechProvider)}>{TECH_PROVIDERS.map((provider) => <option value={provider}>{provider}</option>)}</select></label>
         </Show>
 
         <Show when={props.tool === 'social-links'}>
-          <p class="inspector-description">Choose a service, enter its full profile URL, then repeat for other services.</p>
-          <label>Service<select value={socialPlatform()} onChange={(event) => setSocialPlatform(event.currentTarget.value as SocialPlatformId)}>{SOCIAL_PLATFORMS.map((platform) => <option value={platform.id}>{platform.label}</option>)}</select></label>
-          <label>Profile URL<input value={socialLinks()[socialPlatform()] ?? ''} placeholder="https://…" onInput={(event) => updateSocialLink(event.currentTarget.value)} /></label>
-          <label>Appearance<select value={socialStyle()} onChange={(event) => setSocialStyle(event.currentTarget.value as 'icons' | 'badges')}><option value="icons">Icons</option><option value="badges">Badges</option></select></label>
-          <div class="configured-items">{Object.entries(socialLinks()).filter(([, value]) => value).map(([platform]) => <span>{SOCIAL_PLATFORMS.find(({ id }) => id === platform)?.label}</span>)}</div>
+          <label>Platform<select value={socialPlatform()} onChange={(event) => setSocialPlatform(event.currentTarget.value as SocialPlatformId)}>{SOCIAL_PLATFORMS.map((platform) => <option value={platform.id}>{platform.label}</option>)}</select></label>
+          <label>Profile link or username<input value={socialLinks()[socialPlatform()] ?? ''} placeholder="username or full URL" onInput={(event) => updateSocialLink(event.currentTarget.value)} /></label>
+          <label>Visual style<select value={socialStyle()} onChange={(event) => setSocialStyle(event.currentTarget.value as 'icons' | 'badges')}><option value="icons">Skill Icons</option><option value="badges">Shields Badges</option></select></label>
+          <Show when={Object.keys(socialLinks()).length}>
+            <div class="configured-items">{Object.entries(socialLinks()).filter(([, value]) => Boolean(value)).map(([key, value]) => <span>{key}: {value}</span>)}</div>
+          </Show>
         </Show>
 
         <Show when={props.tool === 'github-stats'}>
@@ -212,14 +243,30 @@ export function ProfileInspector(props: ProfileInspectorProps) {
         </Show>
 
         <Show when={props.tool === 'snake'}>
+          <div class="preview-header-meta">
+            <Show when={realMatrix()}>
+              <span class="live-activity-badge">● Real GitHub activity loaded</span>
+            </Show>
+            <Show when={loadingContributions()}>
+              <span class="loading-activity-badge">Loading activity…</span>
+            </Show>
+          </div>
           <p class="workflow-note"><strong>Requires workflow</strong>Export will include <code>.github/workflows/snake.yml</code>.</p>
-          <div class="game-live-preview" innerHTML={generateSnakeSvg({ username: username() || 'octocat', theme: 'dark' })} />
+          <div class="game-live-preview" innerHTML={generateSnakeSvg({ username: effectiveUsername(), theme: 'dark', matrix: realMatrix() ?? undefined })} />
         </Show>
 
         <Show when={props.tool === 'arcade'}>
           <label>Game<select value={arcadeGame()} onChange={(event) => setArcadeGame(event.currentTarget.value as ArcadeGame)}>{ARCADE_GAMES.map((game) => <option value={game.id}>{game.label}</option>)}</select></label>
+          <div class="preview-header-meta">
+            <Show when={realMatrix()}>
+              <span class="live-activity-badge">● Real GitHub activity loaded</span>
+            </Show>
+            <Show when={loadingContributions()}>
+              <span class="loading-activity-badge">Loading activity…</span>
+            </Show>
+          </div>
           <p class="workflow-note"><strong>Requires workflow</strong>Export will include <code>.github/workflows/arcade.yml</code>.</p>
-          <div class="game-live-preview" innerHTML={getGameSvg(arcadeGame(), { username: username() || 'octocat', theme: 'dark' })} />
+          <div class="game-live-preview" innerHTML={getGameSvg(arcadeGame(), { username: effectiveUsername(), theme: 'dark', matrix: realMatrix() ?? undefined })} />
         </Show>
 
         <Show when={props.tool === 'medium'}>

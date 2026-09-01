@@ -2,8 +2,17 @@ import DOMPurify from 'dompurify';
 import { marked } from 'marked';
 import { createEffect, createMemo, createSignal, onSettled, Show } from 'solid-js';
 import './App.css';
+import { GitHubModal, type GitHubModalTab } from './components/GitHubModal';
 import { ProfileInspector } from './components/ProfileInspector';
 import { getGameDataUri } from './lib/arcade-preview';
+import { fetchRealGitHubContributions, getCachedContributions } from './lib/contributions';
+import {
+  clearStoredSession,
+  getStoredSession,
+  handleOAuthCallback,
+  startGitHubLogin,
+  type GitHubSessionData,
+} from './lib/github';
 import {
   PROFILE_TOOL_CATALOG,
   getRequiredProfileFiles,
@@ -79,19 +88,25 @@ const shieldFieldMeta: Record<ShieldBadgeInputKey, { readonly label: string; rea
   docsProject: { label: 'Read the Docs project', placeholder: 'project-slug' },
 };
 
-function preparePreviewMarkdown(raw: string): string {
+function preparePreviewMarkdown(raw: string, _refreshTrigger?: number): string {
   let content = raw;
 
   // Replace snake raw GitHub URLs with simulated animated SVG Data URI in preview
   content = content.replace(
     /https:\/\/raw\.githubusercontent\.com\/([^/]+)\/[^/]+\/output\/snake(-dark)?\.svg/g,
-    (_, user, dark) => getGameDataUri('snake', { username: user, theme: dark ? 'dark' : 'light' }),
+    (_, user, dark) => {
+      const matrix = getCachedContributions(user) ?? undefined;
+      return getGameDataUri('snake', { username: user, theme: dark ? 'dark' : 'light', matrix });
+    },
   );
 
   // Replace arcade game raw GitHub URLs with simulated animated SVG Data URI in preview
   content = content.replace(
     /https:\/\/raw\.githubusercontent\.com\/([^/]+)\/[^/]+\/output\/(pacman|breakout|galaga|puzzle-bobble|bomberman)-contribution-graph(-dark)?\.svg/g,
-    (_, user, game: ArcadeGame, dark) => getGameDataUri(game, { username: user, theme: dark ? 'dark' : 'light' }),
+    (_, user, game: ArcadeGame, dark) => {
+      const matrix = getCachedContributions(user) ?? undefined;
+      return getGameDataUri(game, { username: user, theme: dark ? 'dark' : 'light', matrix });
+    },
   );
 
   return content;
@@ -113,12 +128,40 @@ function App() {
   });
   const [selectedBadgePreset, setSelectedBadgePreset] = createSignal<ShieldBadgePresetId | null>('build');
   const [shieldInputs, setShieldInputs] = createSignal<ShieldBadgeInputs>(DEFAULT_SHIELD_BADGE_INPUTS);
+
+  // GitHub connection & modal state
+  const [session, setSession] = createSignal<GitHubSessionData | null>(getStoredSession());
+  const [gitHubModalOpen, setGitHubModalOpen] = createSignal(false);
+  const [gitHubModalTab, setGitHubModalTab] = createSignal<GitHubModalTab>('open');
+  const [activityRefresh, setActivityRefresh] = createSignal(0);
+
   let editor!: HTMLTextAreaElement;
   let fileInput!: HTMLInputElement;
 
   marked.setOptions({ gfm: true, breaks: false });
 
+  // Fetch real contribution activity when session is active
+  createEffect(() => {
+    const user = session()?.user.login;
+    if (user) {
+      fetchRealGitHubContributions(user, session()?.token)
+        .then(() => setActivityRefresh((v) => v + 1))
+        .catch(() => {});
+    }
+  });
+
   onSettled(() => {
+    // Process OAuth callback if returning from GitHub
+    handleOAuthCallback()
+      .then((newSession) => {
+        if (newSession) {
+          setSession(newSession);
+          setGitHubModalTab('open');
+          setGitHubModalOpen(true);
+        }
+      })
+      .catch((error) => console.error('OAuth callback error:', error));
+
     const draft = localStorage.getItem(STORAGE_KEY);
     if (draft !== null) {
       editor.value = draft;
@@ -143,7 +186,7 @@ function App() {
   );
 
   const renderedMarkdown = createMemo(() => {
-    const previewContent = preparePreviewMarkdown(markdown());
+    const previewContent = preparePreviewMarkdown(markdown(), activityRefresh());
     const html = marked.parse(previewContent, { async: false });
     return DOMPurify.sanitize(html, {
       USE_PROFILES: { html: true },
@@ -236,8 +279,6 @@ function App() {
     editor.focus();
     editor.setSelectionRange(start, end);
 
-    // execCommand is retained here because it adds programmatic insertions to
-    // the textarea's platform-native undo stack. setRangeText is the fallback.
     if (!document.execCommand('insertText', false, replacement)) {
       editor.setRangeText(replacement, start, end, 'end');
     }
@@ -311,6 +352,22 @@ function App() {
     else if (key === 'k') { event.preventDefault(); applyInsertion('[', '](https://example.com)', 'link text'); }
   }
 
+  function openGitHubModal(tab: GitHubModalTab = 'open'): void {
+    setGitHubModalTab(tab);
+    setGitHubModalOpen(true);
+  }
+
+  function handleLogoutGitHub(): void {
+    clearStoredSession();
+    setSession(null);
+    setGitHubModalOpen(false);
+  }
+
+  function handleLoadedReadme(content: string, repoFullName: string): void {
+    replaceEditorDocument(content);
+    setFileName(`${repoFullName}/README.md`);
+  }
+
   return (
     <div class="app-shell" onDragEnter={(event) => { event.preventDefault(); setDraggingFile(true); }} onDragOver={(event) => event.preventDefault()} onDragLeave={(event) => { if (event.currentTarget === event.target) setDraggingFile(false); }} onDrop={(event) => { event.preventDefault(); setDraggingFile(false); importFile(event.dataTransfer?.files[0]); }}>
       <header class="topbar">
@@ -318,9 +375,24 @@ function App() {
         <div class="document-status"><span class="file-dot" aria-hidden="true" /><span class="file-name">{fileName()}</span><span class="metadata-separator" aria-hidden="true">·</span><span class="save-status">{saved() ? 'Saved locally' : 'Saving…'}</span></div>
         <div class="top-actions">
           <input ref={fileInput} class="visually-hidden" type="file" accept=".md,.markdown,text/markdown" onChange={(event) => importFile(event.currentTarget.files?.[0])} />
+          
+          <Show when={session()} fallback={
+            <button class="button github-btn" onClick={() => startGitHubLogin()}>
+              🐙 Connect GitHub
+            </button>
+          }>
+            <button class="button github-btn connected" onClick={() => openGitHubModal('open')} title="Manage GitHub connection">
+              <img class="user-avatar-small" src={session()?.user.avatar_url} alt="" />
+              <span>@{session()?.user.login}</span>
+            </button>
+            <button class="button ghost" onClick={() => openGitHubModal('publish')}>
+              Publish
+            </button>
+          </Show>
+
           <button class="button ghost" onClick={resetReadme}>New</button>
           <button class="button ghost" onClick={() => fileInput.click()}>Import</button>
-          <button class="button primary" onClick={downloadReadme}>Export README</button>
+          <button class="button primary" onClick={downloadReadme}>Export</button>
         </div>
       </header>
 
@@ -371,7 +443,13 @@ function App() {
                 <Show when={activeInsertTool()} fallback={
                   <>
                     <Show when={isProfileTool(activeTool())}>
-                      <ProfileInspector tool={activeTool() as ProfileToolId} onInsert={insertProfileMarkdown} onReplace={replaceWithProfileTemplate} />
+                      <ProfileInspector
+                        tool={activeTool() as ProfileToolId}
+                        currentUser={session()?.user}
+                        sessionToken={session()?.token}
+                        onInsert={insertProfileMarkdown}
+                        onReplace={replaceWithProfileTemplate}
+                      />
                     </Show>
                     <Show when={activeTool() === 'badge'}>
                       <p class="inspector-description">Build a Shields.io badge and insert generated Markdown.</p>
@@ -425,9 +503,16 @@ function App() {
             </Show>
 
             <Show when={inspectorTab() === 'export'}>
-              <p class="eyebrow">File output</p><h2>Export</h2><p class="inspector-description">Download your README and any generated automation files.</p>
+              <p class="eyebrow">File output</p><h2>Export</h2><p class="inspector-description">Download your README and any generated automation files or publish directly to GitHub.</p>
+              
+              <Show when={session()} fallback={
+                <button class="wide-action" onClick={() => startGitHubLogin()}>Connect GitHub to Publish</button>
+              }>
+                <button class="wide-action" onClick={() => openGitHubModal('publish')}>Publish directly to GitHub</button>
+              </Show>
+
               <div class="export-file"><span aria-hidden="true">.MD</span><div><strong>{fileName()}</strong><small>{stats().lines} lines · {stats().words} words</small></div></div>
-              <button class="wide-action" onClick={downloadReadme}>Download README.md</button>
+              <button class="button ghost wide-action" onClick={downloadReadme}>Download README.md</button>
               <Show when={requiredProfileFiles().length}>
                 <div class="workflow-files">
                   <h3>Required workflow files</h3>
@@ -448,6 +533,19 @@ function App() {
       </div>
 
       <Show when={draggingFile()}><div class="drop-overlay"><div><span aria-hidden="true">↓</span><strong>Drop your Markdown file here</strong><small>Imports .md and .markdown documents</small></div></div></Show>
+
+      {/* GitHub Integration Modal */}
+      <GitHubModal
+        isOpen={gitHubModalOpen()}
+        initialTab={gitHubModalTab()}
+        session={session()}
+        readmeContent={markdown()}
+        workflowFiles={requiredProfileFiles()}
+        onClose={() => setGitHubModalOpen(false)}
+        onLogin={() => startGitHubLogin()}
+        onLogout={handleLogoutGitHub}
+        onLoadReadme={handleLoadedReadme}
+      />
     </div>
   );
 }

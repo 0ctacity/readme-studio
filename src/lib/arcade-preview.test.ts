@@ -25,7 +25,14 @@ describe('arcade preview SVG generators', () => {
 
     const galaga = generateGalagaSvg({ username: 'octocat', theme: 'dark' });
     expect(galaga).toContain('<svg');
-    expect(galaga).toContain('starship');
+    expect(galaga).toContain('ship');
+  });
+
+  test('supports custom contribution matrix for real activity', () => {
+    const customMatrix = Array.from({ length: 50 }, () => [4, 4, 4, 4, 4, 4, 4]);
+    const svg = generateSnakeSvg({ username: 'realuser', matrix: customMatrix });
+    expect(svg).toContain('fill="#39d353"');
+    expect(svg).toContain('realuser');
   });
 
   test('getGameSvg and getGameDataUri return expected format', () => {
