@@ -4,6 +4,7 @@ import { createEffect, createMemo, createSignal, onSettled, Show } from 'solid-j
 import './App.css';
 import { GitHubModal, type GitHubModalTab } from './components/GitHubModal';
 import { ProfileInspector } from './components/ProfileInspector';
+import { VisualEditor } from './components/VisualEditor';
 import { getGameDataUri } from './lib/arcade-preview';
 import { fetchRealGitHubContributions, getCachedContributions } from './lib/contributions';
 import {
@@ -59,6 +60,7 @@ MIT
 `;
 
 type PanelMode = 'editor' | 'preview';
+type EditorStyle = 'visual' | 'plain';
 type InsertTool = 'heading' | 'link' | 'image' | 'code' | 'table' | 'details' | 'centered';
 type ToolPanel = InsertTool | ProfileToolId | 'badge' | 'toc' | 'tree';
 type InspectorTab = 'tool' | 'document' | 'checks' | 'export';
@@ -116,6 +118,7 @@ function App() {
   const [markdown, setMarkdown] = createSignal(STARTER_README);
   const [fileName, setFileName] = createSignal('README.md');
   const [panelMode, setPanelMode] = createSignal<PanelMode>('editor');
+  const [editorStyle, setEditorStyle] = createSignal<EditorStyle>('visual');
   const [activeTool, setActiveTool] = createSignal<ToolPanel>('heading');
   const [inspectorTab, setInspectorTab] = createSignal<InspectorTab>('tool');
   const [toolboxCollapsed, setToolboxCollapsed] = createSignal(false);
@@ -135,7 +138,7 @@ function App() {
   const [gitHubModalTab, setGitHubModalTab] = createSignal<GitHubModalTab>('open');
   const [activityRefresh, setActivityRefresh] = createSignal(0);
 
-  let editor!: HTMLTextAreaElement;
+  let editor: HTMLTextAreaElement | undefined;
   let fileInput!: HTMLInputElement;
 
   marked.setOptions({ gfm: true, breaks: false });
@@ -164,7 +167,7 @@ function App() {
 
     const draft = localStorage.getItem(STORAGE_KEY);
     if (draft !== null) {
-      editor.value = draft;
+      if (editor) editor.value = draft;
       setMarkdown(draft);
     }
     if (window.innerWidth <= 900) {
@@ -262,11 +265,15 @@ function App() {
   }
 
   function applyInsertion(before: string, after = '', placeholder = ''): void {
-    const start = editor.selectionStart ?? editor.value.length;
-    const end = editor.selectionEnd ?? start;
-    const result = insertText(editor.value, start, end, before, after, placeholder);
-    const replacement = result.value.slice(start, result.selectionEnd + after.length);
-    replaceEditorRange(replacement, start, end, result.selectionStart, result.selectionEnd);
+    if (editor) {
+      const start = editor.selectionStart ?? editor.value.length;
+      const end = editor.selectionEnd ?? start;
+      const result = insertText(editor.value, start, end, before, after, placeholder);
+      const replacement = result.value.slice(start, result.selectionEnd + after.length);
+      replaceEditorRange(replacement, start, end, result.selectionStart, result.selectionEnd);
+    } else {
+      setMarkdown((current) => `${current}\n\n${before}${placeholder}${after}\n\n`);
+    }
   }
 
   function replaceEditorRange(
@@ -276,19 +283,27 @@ function App() {
     selectionStart: number,
     selectionEnd: number,
   ): void {
-    editor.focus();
-    editor.setSelectionRange(start, end);
+    if (editor) {
+      editor.focus();
+      editor.setSelectionRange(start, end);
 
-    if (!document.execCommand('insertText', false, replacement)) {
-      editor.setRangeText(replacement, start, end, 'end');
+      if (!document.execCommand('insertText', false, replacement)) {
+        editor.setRangeText(replacement, start, end, 'end');
+      }
+
+      setMarkdown(editor.value);
+      editor.setSelectionRange(selectionStart, selectionEnd);
+    } else {
+      setMarkdown((current) => current.slice(0, start) + replacement + current.slice(end));
     }
-
-    setMarkdown(editor.value);
-    editor.setSelectionRange(selectionStart, selectionEnd);
   }
 
   function replaceEditorDocument(value: string): void {
-    replaceEditorRange(value, 0, editor.value.length, value.length, value.length);
+    if (editor) {
+      replaceEditorRange(value, 0, editor.value.length, value.length, value.length);
+    } else {
+      setMarkdown(value);
+    }
   }
 
   function downloadFile(name: string, content: string, type = 'text/plain;charset=utf-8'): void {
@@ -332,7 +347,7 @@ function App() {
     const freshReadme = '# Project name\n\nDescribe your project here.\n';
     replaceEditorDocument(freshReadme);
     setFileName('README.md');
-    requestAnimationFrame(() => editor.focus());
+    if (editor) requestAnimationFrame(() => editor?.focus());
   }
 
   function insertToc(): void {
@@ -426,10 +441,56 @@ function App() {
         </aside>
 
         <main class="workbench">
-          <div class="view-switcher workspace-switcher" aria-label="Workspace view">{(['editor', 'preview'] as const).map((mode) => <button class={{ active: panelMode() === mode }} onClick={() => setPanelMode(mode)}>{mode}</button>)}</div>
+          <div class="workbench-header">
+            <div class="editor-style-switcher" aria-label="Editor style">
+              <button class={{ active: editorStyle() === 'visual' }} onClick={() => setEditorStyle('visual')}>
+                ✨ Visual Editor
+              </button>
+              <button class={{ active: editorStyle() === 'plain' }} onClick={() => setEditorStyle('plain')}>
+                📝 Plain Markdown
+              </button>
+            </div>
+
+            <div class="view-switcher" aria-label="Workspace view">
+              {(['editor', 'preview'] as const).map((mode) => (
+                <button class={{ active: panelMode() === mode }} onClick={() => setPanelMode(mode)}>
+                  {mode}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div class={['workspace', panelMode()]}>
-            <section class={['editor-pane', { hidden: panelMode() === 'preview' }]}><textarea ref={(element) => { editor = element; editor.value = STARTER_README; }} onInput={(event) => setMarkdown(event.currentTarget.value)} onKeyDown={handleKeyboard} spellcheck={false} aria-label="Markdown editor" /></section>
-            <section class={['preview-pane', { hidden: panelMode() === 'editor' }]}><div class="preview-scroll"><Show when={markdown().trim()} fallback={<div class="empty-state"><span>R/</span><h2>Your README starts here</h2><p>Write Markdown in the editor or import a file to see it rendered.</p></div>}><article class="markdown-body" innerHTML={renderedMarkdown()} /></Show></div></section>
+            <section class={['editor-pane', { hidden: panelMode() === 'preview' }]}>
+              <Show when={editorStyle() === 'visual'} fallback={
+                <textarea
+                  ref={(element) => {
+                    editor = element;
+                    editor.value = markdown();
+                  }}
+                  onInput={(event) => setMarkdown(event.currentTarget.value)}
+                  onKeyDown={handleKeyboard}
+                  spellcheck={false}
+                  aria-label="Markdown editor"
+                />
+              }>
+                <VisualEditor
+                  markdown={markdown()}
+                  onChange={(newMd) => {
+                    setMarkdown(newMd);
+                    if (editor) editor.value = newMd;
+                  }}
+                  onOpenBadgeTool={() => selectTool('badge')}
+                />
+              </Show>
+            </section>
+            <section class={['preview-pane', { hidden: panelMode() === 'editor' }]}>
+              <div class="preview-scroll">
+                <Show when={markdown().trim()} fallback={<div class="empty-state"><span>R/</span><h2>Your README starts here</h2><p>Write Markdown in the editor or import a file to see it rendered.</p></div>}>
+                  <article class="markdown-body" innerHTML={renderedMarkdown()} />
+                </Show>
+              </div>
+            </section>
           </div>
         </main>
 

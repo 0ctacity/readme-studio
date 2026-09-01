@@ -20,8 +20,10 @@
   },
   "dependencies": {
     "@solidjs/web": "^2.0.0-rc.0",
+    "@types/turndown": "^5.0.6",
     "dompurify": "^3.4.13",
     "marked": "^18.0.10",
-    "solid-js": "^2.0.0-rc.0"
+    "solid-js": "^2.0.0-rc.0",
+    "turndown": "^7.2.4"
   }
 }
