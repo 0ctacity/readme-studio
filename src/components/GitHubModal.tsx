@@ -34,22 +34,22 @@ export function GitHubModal(props: GitHubModalProps) {
   const [publishSuccess, setPublishSuccess] = createSignal<string | null>(null);
   const [errorMessage, setErrorMessage] = createSignal<string | null>(null);
 
-  createEffect(() => {
-    if (props.initialTab) setTab(props.initialTab);
+  createEffect(() => props.initialTab, (initialTab) => {
+    if (initialTab) setTab(initialTab);
   });
 
-  createEffect(() => {
-    if (props.isOpen && props.session && repositories().length === 0) {
-      loadRepos();
-    }
-  });
+  createEffect(
+    () => (props.isOpen && repositories().length === 0 ? props.session : null),
+    (session) => {
+      if (session) void loadRepos(session);
+    },
+  );
 
-  async function loadRepos(): Promise<void> {
-    if (!props.session) return;
+  async function loadRepos(session: GitHubSessionData): Promise<void> {
     setLoadingRepos(true);
     setErrorMessage(null);
     try {
-      const repos = await fetchUserRepositories(props.session.token);
+      const repos = await fetchUserRepositories(session.token);
       setRepositories(repos);
       if (repos.length > 0 && !selectedRepo()) {
         setSelectedRepo(repos[0]);
@@ -169,7 +169,7 @@ export function GitHubModal(props: GitHubModalProps) {
                   value={repoSearch()}
                   onInput={(e) => setRepoSearch(e.currentTarget.value)}
                 />
-                <button class="button ghost" onClick={loadRepos} disabled={loadingRepos()}>
+                <button class="button ghost" onClick={() => { if (props.session) void loadRepos(props.session); }} disabled={loadingRepos()}>
                   {loadingRepos() ? 'Refreshing…' : 'Refresh'}
                 </button>
               </div>

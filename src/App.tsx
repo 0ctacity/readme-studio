@@ -1,6 +1,6 @@
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
-import { createEffect, createMemo, createSignal, onSettled, Show } from 'solid-js';
+import { createEffect, createMemo, createSignal, onCleanup, Show } from 'solid-js';
 import './App.css';
 import { GitHubModal, type GitHubModalTab } from './components/GitHubModal';
 import { ProfileInspector } from './components/ProfileInspector';
@@ -115,14 +115,17 @@ function preparePreviewMarkdown(raw: string, _refreshTrigger?: number): string {
 }
 
 function App() {
-  const [markdown, setMarkdown] = createSignal(STARTER_README);
+  const initialDraft = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
+  const collapsePanelsInitially = typeof window !== 'undefined' && window.innerWidth <= 900;
+
+  const [markdown, setMarkdown] = createSignal(initialDraft ?? STARTER_README);
   const [fileName, setFileName] = createSignal('README.md');
   const [panelMode, setPanelMode] = createSignal<PanelMode>('editor');
   const [editorStyle, setEditorStyle] = createSignal<EditorStyle>('visual');
   const [activeTool, setActiveTool] = createSignal<ToolPanel>('heading');
   const [inspectorTab, setInspectorTab] = createSignal<InspectorTab>('tool');
-  const [toolboxCollapsed, setToolboxCollapsed] = createSignal(false);
-  const [inspectorCollapsed, setInspectorCollapsed] = createSignal(false);
+  const [toolboxCollapsed, setToolboxCollapsed] = createSignal(collapsePanelsInitially);
+  const [inspectorCollapsed, setInspectorCollapsed] = createSignal(collapsePanelsInitially);
   const [saved, setSaved] = createSignal(true);
   const [draggingFile, setDraggingFile] = createSignal(false);
   const [treePaths, setTreePaths] = createSignal('src/App.tsx\nsrc/lib/readme.ts\npublic/favicon.ico\nREADME.md');
@@ -144,17 +147,17 @@ function App() {
   marked.setOptions({ gfm: true, breaks: false });
 
   // Fetch real contribution activity when session is active
-  createEffect(() => {
-    const user = session()?.user.login;
+  createEffect(session, (currentSession) => {
+    const user = currentSession?.user.login;
     if (user) {
-      fetchRealGitHubContributions(user, session()?.token)
+      fetchRealGitHubContributions(user, currentSession.token)
         .then(() => setActivityRefresh((v) => v + 1))
         .catch(() => {});
     }
   });
 
-  onSettled(() => {
-    // Process OAuth callback if returning from GitHub
+  // Client-side initialization
+  if (typeof window !== 'undefined') {
     handleOAuthCallback()
       .then((newSession) => {
         if (newSession) {
@@ -165,28 +168,21 @@ function App() {
       })
       .catch((error) => console.error('OAuth callback error:', error));
 
-    const draft = localStorage.getItem(STORAGE_KEY);
-    if (draft !== null) {
-      if (editor) editor.value = draft;
-      setMarkdown(draft);
-    }
-    if (window.innerWidth <= 900) {
-      setToolboxCollapsed(true);
-      setInspectorCollapsed(true);
-    }
-  });
 
-  createEffect(
-    () => markdown(),
-    (value) => {
-      setSaved(false);
-      const timer = window.setTimeout(() => {
-        localStorage.setItem(STORAGE_KEY, value);
-        setSaved(true);
-      }, 450);
-      return () => window.clearTimeout(timer);
-    },
-  );
+  }
+
+  // Auto-save effect
+  createEffect(markdown, (value) => {
+    if (typeof window === 'undefined') return;
+
+    setSaved(false);
+    const timer = window.setTimeout(() => {
+      localStorage.setItem(STORAGE_KEY, value);
+      setSaved(true);
+    }, 450);
+
+    onCleanup(() => window.clearTimeout(timer));
+  });
 
   const renderedMarkdown = createMemo(() => {
     const previewContent = preparePreviewMarkdown(markdown(), activityRefresh());

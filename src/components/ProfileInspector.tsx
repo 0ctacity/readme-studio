@@ -88,27 +88,30 @@ export function ProfileInspector(props: ProfileInspectorProps) {
   const [realMatrix, setRealMatrix] = createSignal<ContributionMatrix | null>(null);
   const [loadingContributions, setLoadingContributions] = createSignal(false);
 
-  createEffect(() => {
-    if (props.currentUser && !username()) {
-      setUsername(props.currentUser.login);
-    }
-  });
+  createEffect(
+    () => [props.currentUser?.login, username()] as const,
+    ([currentUsername, configuredUsername]) => {
+      if (currentUsername && !configuredUsername) setUsername(currentUsername);
+    },
+  );
 
-  createEffect(() => {
-    const targetUser = username().trim() || props.currentUser?.login;
-    if (!targetUser) {
-      setRealMatrix(null);
-      return;
-    }
+  createEffect(
+    () => [username().trim() || props.currentUser?.login, props.tool, props.sessionToken] as const,
+    ([targetUser, tool, sessionToken]) => {
+      if (!targetUser) {
+        setRealMatrix(null);
+        return;
+      }
 
-    if (['snake', 'arcade'].includes(props.tool)) {
-      setLoadingContributions(true);
-      fetchRealGitHubContributions(targetUser, props.sessionToken)
-        .then((matrix) => setRealMatrix(matrix))
-        .catch(() => setRealMatrix(null))
-        .finally(() => setLoadingContributions(false));
-    }
-  });
+      if (['snake', 'arcade'].includes(tool)) {
+        setLoadingContributions(true);
+        fetchRealGitHubContributions(targetUser, sessionToken)
+          .then((matrix) => setRealMatrix(matrix))
+          .catch(() => setRealMatrix(null))
+          .finally(() => setLoadingContributions(false));
+      }
+    },
+  );
 
   const effectiveUsername = createMemo(() => username().trim() || props.currentUser?.login || 'octocat');
 

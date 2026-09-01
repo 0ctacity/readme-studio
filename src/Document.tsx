@@ -81,35 +81,13 @@ export default function Document(props: ParentProps) {
         {/* JSON-LD Structured Data */}
         <script type="application/ld+json" innerHTML={jsonLd} />
 
+        <noscript>
+          <link rel="alternate" type="text/markdown" href="/readme-studio/llms.txt" />
+        </noscript>
+
         <HydrationScript />
       </head>
-      <body>
-        {props.children}
-        <noscript>
-          <main style="max-width: 800px; margin: 40px auto; padding: 24px; font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; color: #17211c; background: #fbfaf5;">
-            <h1>Readme Studio — Interactive GitHub README & Profile Editor by Octacity</h1>
-            <p>Readme Studio by Octacity is a fast, browser-based visual Markdown editor designed for building polished, professional GitHub repository and user profile README documents.</p>
-
-            <h2>Core Features</h2>
-            <ul>
-              <li><strong>Real-Time Markdown Editing:</strong> Write GitHub Flavored Markdown (GFM) with instant sanitized preview, document quality checks, and local auto-save persistence.</li>
-              <li><strong>Shields.io Badge Builder:</strong> Configure live CI/CD status badges, version indicators, npm downloads, code coverage badges, license labels, and Discord community counters.</li>
-              <li><strong>GitHub Profile Suite:</strong> Generate dynamic Capsule Render banners, Contribution Snake animations, retro Arcade contribution graphs (Pac-Man, Breakout, Galaga, Puzzle Bobble, Bomberman), GitHub stats cards, and tech stack icon rows.</li>
-              <li><strong>Productivity Utilities:</strong> Instant project directory tree generator and automated slug-anchored Table of Contents builder.</li>
-            </ul>
-
-            <h2>Agent & Machine-Readable Resources</h2>
-            <p>If you are an AI agent or crawler, access our machine-readable specifications:</p>
-            <ul>
-              <li><a href="/readme-studio/llms.txt">Agent Guide (llms.txt)</a></li>
-              <li><a href="/readme-studio/llms-full.txt">Full Technical Agent Documentation (llms-full.txt)</a></li>
-              <li><a href="/readme-studio/sitemap.xml">XML Sitemap</a></li>
-              <li><a href="/readme-studio/README.md">Raw Markdown Documentation</a></li>
-              <li><a href="https://github.com/0ctacity/readme-studio">GitHub Repository (Octacity)</a></li>
-            </ul>
-          </main>
-        </noscript>
-      </body>
+      <body>{props.children}</body>
     </html>
   );
 }

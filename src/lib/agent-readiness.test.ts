@@ -44,7 +44,5 @@ describe('Agent readiness & Discoverability', () => {
     expect(docSource).toContain('application/ld+json');
     expect(docSource).toContain('type="text/markdown"');
     expect(docSource).toContain('llms.txt');
-    expect(docSource).toContain('<noscript>');
-    expect(docSource).toContain('<h1>Readme Studio — Interactive GitHub README & Profile Editor by Octacity</h1>');
   });
 });

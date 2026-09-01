@@ -1,4 +1,4 @@
-import { createEffect, createSignal, onSettled, Show } from 'solid-js';
+import { createEffect, createSignal, Show } from 'solid-js';
 import { markdownToVisualHtml, visualHtmlToMarkdown } from '../lib/editor-converter';
 
 export interface VisualEditorProps {
@@ -18,7 +18,7 @@ interface SlashCommand {
 }
 
 export function VisualEditor(props: VisualEditorProps) {
-  let editorRef!: HTMLDivElement;
+  let editorRef: HTMLDivElement | undefined;
   let isInternalUpdate = false;
   let updateTimer: number | undefined;
 
@@ -108,19 +108,12 @@ export function VisualEditor(props: VisualEditorProps) {
     );
   };
 
-  onSettled(() => {
-    if (editorRef) {
-      editorRef.innerHTML = markdownToVisualHtml(props.markdown);
-    }
-  });
-
-  createEffect(() => {
-    const newMd = props.markdown;
+  createEffect(() => props.markdown, (newMarkdown) => {
     if (isInternalUpdate) return;
     if (editorRef) {
-      const currentMd = visualHtmlToMarkdown(editorRef.innerHTML);
-      if (currentMd.trim() !== newMd.trim()) {
-        editorRef.innerHTML = markdownToVisualHtml(newMd);
+      const currentMarkdown = visualHtmlToMarkdown(editorRef.innerHTML);
+      if (currentMarkdown.trim() !== newMarkdown.trim()) {
+        editorRef.innerHTML = markdownToVisualHtml(newMarkdown);
       }
     }
   });
@@ -138,12 +131,14 @@ export function VisualEditor(props: VisualEditorProps) {
   }
 
   function exec(command: string, value?: string) {
+    if (!editorRef) return;
     editorRef.focus();
     document.execCommand(command, false, value);
     triggerSync();
   }
 
   function formatBlock(tag: string) {
+    if (!editorRef) return;
     editorRef.focus();
     document.execCommand('formatBlock', false, tag);
     triggerSync();
@@ -342,7 +337,12 @@ export function VisualEditor(props: VisualEditorProps) {
       {/* Editable Canvas */}
       <div class="visual-canvas-scroller">
         <div
-          ref={editorRef}
+          ref={(element) => {
+            editorRef = element;
+            if (element) {
+              element.innerHTML = markdownToVisualHtml(props.markdown);
+            }
+          }}
           class="visual-editor-canvas markdown-body"
           contenteditable={true}
           spellcheck={false}
