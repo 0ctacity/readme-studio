@@ -1,95 +1,105 @@
-## Solid `bare` template
+<div align="center">
 
-The smallest useful Solid 2.0 app: `solid-js` + `@solidjs/web`, no router, no server dependencies.
+# Readme Studio
 
-**Deployment contract:** `vite build` emits a purely static site — deploy `dist/client` to any static host. The client ships only Solid and your component.
+**A fast, interactive visual editor for GitHub repository and profile READMEs.**
 
-## How it works
+[![Deploy to GitHub Pages](https://img.shields.io/github/actions/workflow/status/0ctacity/readme-studio/deploy.yml?branch=main&style=flat-square&logo=github&label=deploy)](https://github.com/0ctacity/readme-studio/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](https://opensource.org/licenses/MIT)
+[![SolidJS](https://img.shields.io/badge/SolidJS-2.0-2c4f7c?style=flat-square&logo=solid)](https://solidjs.com)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-8.x-646cff?style=flat-square&logo=vite)](https://vitejs.dev/)
+[![Bun](https://img.shields.io/badge/Bun-1.3-14151a?style=flat-square&logo=bun)](https://bun.sh/)
 
-There is no `index.html` and no mount file. `@solidjs/vite-plugin`'s turnkey mode (`start: true` in `vite.config.ts`) generates the entries around two conventions:
+[**Live Demo**](https://0ctacity.github.io/readme-studio/) • [**Report Bug**](https://github.com/0ctacity/readme-studio/issues) • [**Request Feature**](https://github.com/0ctacity/readme-studio/issues)
 
-- **`src/App.tsx`** — the app. A plain default-exported component; everything you build lives under it.
-- **`src/Document.tsx`** — the document shell, the new `index.html`. It renders the full `<html>` and is where head tags go (title, meta, favicon). It is compiled only into the prerendered static shell and adds **zero client-side JS**. Delete it to fall back to the plugin's built-in shell.
+</div>
 
-`vite build` prerenders the shell into `dist/client/index.html` and emits the client assets alongside it.
+---
 
-## Usage
+## ✨ Features
 
-Those templates dependencies are maintained via [pnpm](https://pnpm.io) via `pnpm up -Lri`.
+### 📝 Real-Time Markdown Editing & GitHub Preview
+- **Split-view & Full-preview modes**: Write GFM (GitHub Flavored Markdown) and see instant sanitized rendering.
+- **Local persistence**: Automatic auto-save to browser local storage so your work is never lost.
+- **Drag & drop imports**: Drop any `.md` file directly into the studio to edit existing documentation.
+- **Document quality checks**: Real-time linting for document titles (H1), image alt text accessibility, and duplicate headings.
+- **Document stats & outline**: Live word, character, and line counters alongside a clickable heading outline.
 
-This is the reason you see a `pnpm-lock.yaml`. That being said, any package manager will work. This file can be safely be removed once you clone a template.
+### 🛡️ Shields.io & Custom Badge Builder
+- **Dynamic presets**: CI/CD build status, latest GitHub releases, npm downloads, code coverage (Codecov), license indicators, Discord members, Read the Docs builds, and GitHub star counters.
+- **Custom badge designer**: Configure labels, messages, colors, badge styles (`flat-square`, `for-the-badge`, `plastic`, etc.), custom brand logos, and target links.
+
+### 🎨 GitHub Profile README Suite
+- **Capsule Banners**: Dynamic SVG header and footer banner generators powered by Capsule Render.
+- **Contribution Graph Animations**: Interactive Contribution Snake generator and retro arcade graphs (Pac-Man, Breakout, Galaga, Bomberman, Puzzle Bobble).
+- **Workflow generator**: Automatic creation and download of required GitHub Actions workflows (`snake.yml`, `arcade.yml`).
+- **Stats & Cards**: GitHub profile stats cards, top languages, streak counters, trophies, and activity graphs with custom themes.
+- **Tech Stack Badges**: Visual skill rows powered by Skill Icons, Devicons, Simple Icons, and Shields.io.
+- **Social Links & View Counters**: One-click icon and badge generators for 35+ social networks, blogs, and visitor counters.
+
+### 📂 Productivity Tools
+- **Project Tree Generator**: Convert file lists into clean directory trees for your README.
+- **Automatic Table of Contents**: Generate linked, slugified table-of-contents lists based on your document headings.
+- **Keyboard Shortcuts**: Common editor shortcuts (`Cmd/Ctrl + S` to export, `Cmd/Ctrl + B` for bold, `Cmd/Ctrl + K` for links).
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- [Bun](https://bun.sh/) (recommended) or Node.js >= 20
+
+### Installation
 
 ```bash
-$ npm install # or pnpm install or yarn install
+# Clone the repository
+git clone https://github.com/0ctacity/readme-studio.git
+cd readme-studio
+
+# Install dependencies
+bun install
 ```
 
-### Learn more on the [Solid Website](https://solidjs.com) and come chat with us on our [Discord](https://discord.com/invite/solidjs)
+### Development Server
 
-## Available Scripts
+Start the local development server:
 
-In the project directory, you can run:
+```bash
+bun run dev
+```
 
-### `npm run dev` or `npm start`
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-Runs the app in the development mode.<br>
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+---
 
-The page will reload if you make edits.<br>
+## 🛠️ Scripts
 
-### `npm run build`
+| Command | Description |
+| :--- | :--- |
+| `bun run dev` (or `bun start`) | Starts the local Vite development server with HMR. |
+| `bun run build` | Compiles the production static site into `dist/client`. |
+| `bun run serve` | Serves the production build locally for previewing. |
+| `bun run test` | Runs unit tests for profile generators, badge builders, and markdown helpers. |
+| `bun run typecheck` | Runs the TypeScript compiler to verify all types without emitting files. |
 
-Builds the static production site to `dist/client`.
+---
 
-### `npm run serve`
+## 📦 Deployment (GitHub Pages)
 
-Serves the production build locally.
+Readme Studio builds into a **pure static client** (`dist/client`).
 
-## Cloudflare Worker API
+The repository is configured with an automated GitHub Actions deployment workflow ([`.github/workflows/deploy.yml`](file:///Users/atasesli/Desktop/VsCode/readme-studio/.github/workflows/deploy.yml)).
 
-The GitHub integration lives in a Hono + TypeScript Worker under `worker/`. The
-frontend remains a static GitHub Pages application; GitHub access tokens are
-exchanged and used only by the Worker.
+Whenever changes are pushed to the `main` branch:
+1. Bun installs dependencies.
+2. Unit tests and type checks are validated.
+3. The static bundle is built via `bun run build`.
+4. Artifacts are automatically published to **GitHub Pages** at `https://0ctacity.github.io/readme-studio/`.
 
-1. Create a GitHub App and set its callback URL to
-   `http://localhost:8787/auth/github/callback` for local development. Give the
-   app read-only metadata plus read/write Contents and Workflows repository
-   permissions, then let users choose which repositories to install it on.
-2. Copy `.dev.vars.example` to `.dev.vars` and provide the GitHub App client ID,
-   client secret, and a random session secret.
-3. Run `bun run worker:types` after changing `wrangler.jsonc`.
-4. Run `bun run worker:dev` to start the API at `http://localhost:8787`.
+---
 
-The browser starts OAuth with a random `state`, PKCE verifier, and S256 PKCE
-challenge. It validates the returned state, exchanges the temporary code through
-`POST /auth/github/exchange`, and keeps the resulting 30-minute Readme Studio
-session in memory or session storage. The GitHub token is encrypted inside that
-session and is never returned as plaintext.
+## 📄 License
 
-Worker routes:
-
-- `GET /health`
-- `GET /auth/github/start`
-- `GET /auth/github/callback`
-- `POST /auth/github/exchange`
-- `GET /api/github/user`
-- `GET /api/github/repositories`
-- `GET /api/github/repositories/:owner/:repository/readme`
-- `POST /api/github/publish`
-
-`/api/github/publish` intentionally accepts only `README.md` and up to five
-`.github/workflows/*.yml` or `.yaml` files. GitHub writes are performed serially.
-No D1, KV, Durable Object, or cross-site authentication cookie is required.
-
-Before a future deployment, set the production frontend URL, callback URL, and
-allowed origin in the Worker environment, then store `GITHUB_CLIENT_SECRET` and
-`SESSION_SECRET` with Wrangler secrets. Do not place production secrets in
-`wrangler.jsonc`.
-
-## The `ssr` flip
-
-Streaming SSR is one boolean: add `ssr: true` next to `start: true` in `vite.config.ts`. `src/App.tsx` and `src/Document.tsx` carry over unchanged — `<HydrationScript />` is already in place in the Document (in client mode it is stripped from the static shell). The build then emits a request handler to `dist/server` instead of a purely static site.
-
-## Growing out of `bare`
-
-- **A router, file-system routes, per-page titles, and testing** come with the `basic` template — same structure, more floors.
-- **A server** (data loading, mutations, sessions, API routes) is the `fullstack` template.
+This project is licensed under the MIT License.
