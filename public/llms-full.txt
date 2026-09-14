@@ -11,7 +11,7 @@
 - License: MIT
 - Tech Stack: SolidJS 2.0, TypeScript 5.9, Vite 8.x, Bun
 
-Readme Studio is a local-first web application for creating, editing, and exporting GitHub repository and profile README files. Optional GitHub access is handled by a stateless Cloudflare Worker.
+Readme Studio is a local-first web application for creating, editing, and exporting GitHub repository and profile README files. Optional GitHub and authenticated MCP access is handled by a Cloudflare Worker. MCP OAuth uses Cloudflare KV for client registrations and encrypted grant properties; README content is not intentionally persisted.
 
 ## Features & Markdown Syntax Generation
 

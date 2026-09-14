@@ -16,7 +16,7 @@
 - Shields.io & Custom Badges: Configurable live and static badges for CI/CD status, releases, downloads, licenses, and social communities.
 - GitHub Profile README Suite: Animated Contribution Snake, Retro Arcade games (Pac-Man, Breakout, Galaga, Puzzle Bobble, Bomberman), Capsule Render banners, GitHub Stats cards, top language widgets, streak counters, and tech stack badges.
 - Productivity Utilities: Project directory tree generator and automated slug-linked Table of Contents generation.
-- Local-First Privacy: README drafts stay in browser local storage; optional GitHub access is handled by a stateless Cloudflare Worker with no application database.
+- Local-First Privacy: README drafts stay in browser local storage. Optional GitHub and agent access uses a Cloudflare Worker; MCP OAuth credentials and encrypted GitHub grant data are stored in Cloudflare KV, but README content is not intentionally persisted.
 
 ## When to use Readme Studio
 
@@ -29,7 +29,8 @@ The core editor does not require an account. Use optional GitHub authorization o
 - Readme Studio is not a collaborative editor, cloud workspace, or WYSIWYG document system.
 - Drafts are stored in the current browser rather than synchronized across devices.
 - Publishing and access to private repositories require optional GitHub authorization with repository and workflow permissions.
-- The application does not expose a general-purpose agent API. Its public machine-readable resources document the product; editing remains an interactive browser workflow.
+- OAuth-capable agents can connect to `https://readme-studio.rappeland2005.workers.dev/mcp`, sign in through GitHub, generate and analyze README content, read repositories, and publish with explicit tool calls and rate limits.
+- There is no unauthenticated README-generation endpoint. Interactive browser editing remains local-first and works without the Worker.
 
 ## Trust and support
 

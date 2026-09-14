@@ -124,7 +124,7 @@ export default function Document(props: ParentProps) {
 
           <section class="agent-homepage-section" aria-labelledby="fallback-privacy">
             <h2 id="fallback-privacy">Local first, with optional GitHub access</h2>
-            <p>Drafts are saved in the browser instead of an application database. Connecting GitHub is optional and is only needed to open repositories, load account-backed contribution data, or publish a README and generated workflow files. The GitHub connection uses a short-lived encrypted Readme Studio session handled by a stateless Cloudflare Worker.</p>
+            <p>Drafts are saved in the browser instead of an application database. Connecting GitHub is optional and is only needed to open repositories, load account-backed contribution data, publish files, or authorize the remote MCP service. Browser connections use short-lived encrypted Readme Studio sessions. MCP client registrations and encrypted GitHub grant data are stored in Cloudflare KV; README content is not intentionally stored by the service.</p>
           </section>
 
           <section class="agent-homepage-section" aria-labelledby="fallback-resources">
