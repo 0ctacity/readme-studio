@@ -22,6 +22,18 @@ interface SlashCommand {
   readonly action: () => void;
 }
 
+type TableAction = 'add-row' | 'add-column' | 'delete-row' | 'delete-column' | 'clear-cell' | 'delete-table';
+
+interface SelectedTableCell {
+  readonly cell: HTMLTableCellElement;
+  readonly table: HTMLTableElement;
+}
+
+interface TableControlState {
+  readonly columnCount: number;
+  readonly isHeader: boolean;
+}
+
 export function VisualEditor(props: VisualEditorProps) {
   let editorRef: HTMLDivElement | undefined;
   let isInternalUpdate = false;
@@ -33,6 +45,7 @@ export function VisualEditor(props: VisualEditorProps) {
   const [slashOpen, setSlashOpen] = createSignal(false);
   const [slashPos, setSlashPos] = createSignal({ top: 0, left: 0 });
   const [selectedIndex, setSelectedIndex] = createSignal(0);
+  const [tableControls, setTableControls] = createSignal<TableControlState | null>(null);
 
   const slashCommands: SlashCommand[] = [
     {
@@ -141,10 +154,20 @@ export function VisualEditor(props: VisualEditorProps) {
 
   function captureSelection(): void {
     const selection = window.getSelection();
-    if (!editorRef || !selection || selection.rangeCount === 0) return;
+    if (!editorRef || !selection || selection.rangeCount === 0) {
+      setTableControls(null);
+      return;
+    }
     const range = selection.getRangeAt(0);
     if (editorRef.contains(range.commonAncestorContainer)) {
       lastSelection = range.cloneRange();
+      const selected = findTableCell(range);
+      setTableControls(selected ? {
+        columnCount: selected.cell.parentElement?.children.length ?? 0,
+        isHeader: selected.cell.tagName === 'TH',
+      } : null);
+    } else {
+      setTableControls(null);
     }
   }
 
@@ -215,6 +238,79 @@ export function VisualEditor(props: VisualEditorProps) {
       <p><br></p>
     `;
     exec('insertHTML', tableHtml);
+  }
+
+  function findTableCell(range = lastSelection): SelectedTableCell | null {
+    if (!editorRef || !range) return null;
+    const node = range.commonAncestorContainer;
+    const element = node instanceof Element ? node : node.parentElement;
+    const cell = element?.closest<HTMLTableCellElement>('td, th');
+    const table = cell?.closest<HTMLTableElement>('table');
+    if (!cell || !table || !editorRef.contains(table)) return null;
+    return { cell, table };
+  }
+
+  function replaceTable(table: HTMLTableElement, replacementHtml: string): void {
+    if (!editorRef) return;
+    editorRef.focus();
+    const range = document.createRange();
+    range.selectNode(table);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    document.execCommand('insertHTML', false, replacementHtml);
+    lastSelection = undefined;
+    setTableControls(null);
+    triggerSync();
+  }
+
+  function editTable(action: TableAction): void {
+    const selected = findTableCell();
+    if (!selected) return;
+
+    const rowIndex = selected.cell.closest<HTMLTableRowElement>('tr')?.rowIndex ?? -1;
+    const columnIndex = selected.cell.cellIndex;
+    const table = selected.table.cloneNode(true) as HTMLTableElement;
+    const row = table.rows.item(rowIndex);
+    const cell = row?.cells.item(columnIndex);
+    if (!row || !cell) return;
+
+    if (action === 'delete-table') {
+      replaceTable(selected.table, '<p><br></p>');
+      return;
+    }
+
+    if (action === 'add-row') {
+      const newRow = document.createElement('tr');
+      const columnCount = Math.max(...Array.from(table.rows, (tableRow) => tableRow.cells.length));
+      for (let index = 0; index < columnCount; index += 1) {
+        newRow.append(document.createElement('td'));
+      }
+      if (row.parentElement?.tagName === 'THEAD') {
+        const body = table.tBodies.item(0) ?? table.createTBody();
+        body.insertBefore(newRow, body.firstChild);
+      } else {
+        row.parentElement?.insertBefore(newRow, row.nextSibling);
+      }
+    } else if (action === 'add-column') {
+      for (const tableRow of table.rows) {
+        const tagName = tableRow.parentElement?.tagName === 'THEAD' ? 'th' : 'td';
+        const newCell = document.createElement(tagName);
+        tableRow.insertBefore(newCell, tableRow.cells.item(columnIndex + 1));
+      }
+    } else if (action === 'delete-row') {
+      if (row.parentElement?.tagName === 'THEAD' || table.rows.length <= 1) return;
+      row.remove();
+    } else if (action === 'delete-column') {
+      if (row.cells.length <= 1) return;
+      for (const tableRow of table.rows) {
+        tableRow.cells.item(columnIndex)?.remove();
+      }
+    } else if (action === 'clear-cell') {
+      cell.textContent = '';
+    }
+
+    replaceTable(selected.table, table.outerHTML);
   }
 
   function insertCodeBlock() {
@@ -370,7 +466,32 @@ export function VisualEditor(props: VisualEditorProps) {
             <span>💡 Callout</span>
           </button>
         </div>
+
       </div>
+
+      <Show when={tableControls()}>
+        <div class="visual-table-toolbar" aria-label="Table controls">
+          <span class="table-toolbar-label">Table</span>
+          <button type="button" class="tool-btn" onClick={() => editTable('add-row')} title="Add row below">
+            + Row
+          </button>
+          <button type="button" class="tool-btn" onClick={() => editTable('add-column')} title="Add column to the right">
+            + Column
+          </button>
+          <button type="button" class="tool-btn" disabled={tableControls()?.isHeader} onClick={() => editTable('delete-row')} title={tableControls()?.isHeader ? 'The header row is required by GitHub Markdown' : 'Delete selected row'}>
+            − Row
+          </button>
+          <button type="button" class="tool-btn" disabled={(tableControls()?.columnCount ?? 0) <= 1} onClick={() => editTable('delete-column')} title="Delete selected column">
+            − Column
+          </button>
+          <button type="button" class="tool-btn" onClick={() => editTable('clear-cell')} title="Clear selected cell">
+            Clear cell
+          </button>
+          <button type="button" class="tool-btn danger" onClick={() => editTable('delete-table')} title="Delete table">
+            Delete table
+          </button>
+        </div>
+      </Show>
 
       {/* Editable Canvas */}
       <div class="visual-canvas-scroller">

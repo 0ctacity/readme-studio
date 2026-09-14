@@ -143,11 +143,23 @@ describe('profile README generators', () => {
       animation: 'fadeIn',
       fontColor: 'ffffff',
       fontSize: 52,
+      fontAlign: 45,
+      fontAlignY: 35,
+      stroke: 'ff8800',
+      descSize: 18,
+      descAlign: 55,
+      descAlignY: 70,
       reverse: false,
     });
     expect(capsule).toContain('capsule-render.vercel.app/api?');
     expect(capsule).toContain('text=Hello');
     expect(capsule).toContain('desc=Readme+Studio');
+    expect(capsule).toContain('fontAlign=45');
+    expect(capsule).toContain('fontAlignY=35');
+    expect(capsule).toContain('stroke=ff8800');
+    expect(capsule).toContain('descSize=18');
+    expect(capsule).toContain('descAlign=55');
+    expect(capsule).toContain('descAlignY=70');
   });
 
   test('builds contribution animations and derives required workflow files from Markdown', () => {

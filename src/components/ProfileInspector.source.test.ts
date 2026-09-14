@@ -8,4 +8,15 @@ describe('ProfileInspector GitHub identity', () => {
     expect(source).toContain('Using @{props.currentUser?.login} from your connected GitHub account.');
     expect(source.match(/<Show when=\{props\.currentUser\} fallback=\{/g)?.length).toBe(2);
   });
+
+  test('exposes advanced Capsule Render positioning and stroke controls', async () => {
+    const source = await Bun.file(new URL('./ProfileInspector.tsx', import.meta.url)).text();
+
+    expect(source).toContain('Title X (%)');
+    expect(source).toContain('Title Y (%)');
+    expect(source).toContain('Description size');
+    expect(source).toContain('Description X (%)');
+    expect(source).toContain('Description Y (%)');
+    expect(source).toContain('Stroke color');
+  });
 });

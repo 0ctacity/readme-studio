@@ -83,6 +83,12 @@ export function ProfileInspector(props: ProfileInspectorProps) {
   const [capsuleAnimation, setCapsuleAnimation] = createSignal('fadeIn');
   const [capsuleFontColor, setCapsuleFontColor] = createSignal('ffffff');
   const [capsuleFontSize, setCapsuleFontSize] = createSignal(52);
+  const [capsuleFontAlign, setCapsuleFontAlign] = createSignal(50);
+  const [capsuleFontAlignY, setCapsuleFontAlignY] = createSignal(50);
+  const [capsuleStroke, setCapsuleStroke] = createSignal('');
+  const [capsuleDescSize, setCapsuleDescSize] = createSignal(20);
+  const [capsuleDescAlign, setCapsuleDescAlign] = createSignal(50);
+  const [capsuleDescAlignY, setCapsuleDescAlignY] = createSignal(60);
   const [capsuleReverse, setCapsuleReverse] = createSignal(false);
 
   // Real contribution matrix state
@@ -161,6 +167,12 @@ export function ProfileInspector(props: ProfileInspectorProps) {
           animation: capsuleAnimation(),
           fontColor: capsuleFontColor(),
           fontSize: capsuleFontSize(),
+          fontAlign: capsuleFontAlign(),
+          fontAlignY: capsuleFontAlignY(),
+          stroke: capsuleStroke(),
+          descSize: capsuleDescSize(),
+          descAlign: capsuleDescAlign(),
+          descAlignY: capsuleDescAlignY(),
           reverse: capsuleReverse(),
         });
       case 'profile-template':
@@ -286,6 +298,9 @@ export function ProfileInspector(props: ProfileInspectorProps) {
           <div class="field-row"><label>Theme<input value={capsuleTheme()} onInput={(event) => setCapsuleTheme(event.currentTarget.value)} /></label><label>Custom color<input value={capsuleColor()} placeholder="optional" onInput={(event) => setCapsuleColor(event.currentTarget.value)} /></label></div>
           <div class="field-row"><label>Height<input type="number" min="40" value={capsuleHeight()} onInput={(event) => setCapsuleHeight(event.currentTarget.valueAsNumber || 40)} /></label><label>Font size<input type="number" min="8" value={capsuleFontSize()} onInput={(event) => setCapsuleFontSize(event.currentTarget.valueAsNumber || 8)} /></label></div>
           <div class="field-row"><label>Animation<input value={capsuleAnimation()} onInput={(event) => setCapsuleAnimation(event.currentTarget.value)} /></label><label>Font color<input value={capsuleFontColor()} onInput={(event) => setCapsuleFontColor(event.currentTarget.value)} /></label></div>
+          <div class="field-row"><label>Title X (%)<input type="number" min="0" max="100" value={capsuleFontAlign()} onInput={(event) => setCapsuleFontAlign(event.currentTarget.valueAsNumber)} /></label><label>Title Y (%)<input type="number" min="0" max="100" value={capsuleFontAlignY()} onInput={(event) => setCapsuleFontAlignY(event.currentTarget.valueAsNumber)} /></label></div>
+          <div class="field-row"><label>Description size<input type="number" min="8" value={capsuleDescSize()} onInput={(event) => setCapsuleDescSize(event.currentTarget.valueAsNumber || 8)} /></label><label>Description X (%)<input type="number" min="0" max="100" value={capsuleDescAlign()} onInput={(event) => setCapsuleDescAlign(event.currentTarget.valueAsNumber)} /></label></div>
+          <div class="field-row"><label>Description Y (%)<input type="number" min="0" max="100" value={capsuleDescAlignY()} onInput={(event) => setCapsuleDescAlignY(event.currentTarget.valueAsNumber)} /></label><label>Stroke color<input value={capsuleStroke()} placeholder="hex, optional" onInput={(event) => setCapsuleStroke(event.currentTarget.value)} /></label></div>
           <div class="option-checks compact"><label><input type="checkbox" checked={capsuleReverse()} onChange={(event) => setCapsuleReverse(event.currentTarget.checked)} />Reverse shape</label></div>
         </Show>
 

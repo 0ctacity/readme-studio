@@ -247,8 +247,15 @@ export function buildCapsuleMarkdown(options: {
   readonly animation: string;
   readonly fontColor: string;
   readonly fontSize: number;
+  readonly fontAlign: number;
+  readonly fontAlignY: number;
+  readonly stroke: string;
+  readonly descSize: number;
+  readonly descAlign: number;
+  readonly descAlignY: number;
   readonly reverse: boolean;
 }): string {
+  const percentage = (value: number) => String(Math.min(100, Math.max(0, Math.round(value))));
   const query = new URLSearchParams({
     type: options.type,
     height: String(Math.max(40, Math.round(options.height))),
@@ -259,7 +266,13 @@ export function buildCapsuleMarkdown(options: {
     animation: options.animation,
     fontColor: options.fontColor.replace(/^#/, '') || 'ffffff',
     fontSize: String(Math.max(8, Math.round(options.fontSize))),
+    fontAlign: percentage(options.fontAlign),
+    fontAlignY: percentage(options.fontAlignY),
+    descSize: String(Math.max(8, Math.round(options.descSize))),
+    descAlign: percentage(options.descAlign),
+    descAlignY: percentage(options.descAlignY),
   });
+  if (options.stroke.trim()) query.set('stroke', options.stroke.trim().replace(/^#/, ''));
   if (options.color.trim()) query.set('color', options.color.trim().replace(/^#/, ''));
   else query.set('theme', options.theme || 'cobalt');
   return `<img width="100%" src="https://capsule-render.vercel.app/api?${query.toString()}" alt="${escapeHtml(options.text || 'Profile banner')}" />`;
@@ -366,7 +379,7 @@ export const PROFILE_TEMPLATES = [
     id: 'visual',
     name: 'Visual profile',
     description: 'Capsule banner, icons, trophies, and contribution graph.',
-    build: (username: string) => `${buildCapsuleMarkdown({ type: 'waving', section: 'header', height: 170, theme: 'cobalt', color: '', text: 'Welcome', description: 'Developer profile', animation: 'fadeIn', fontColor: 'ffffff', fontSize: 54, reverse: false })}\n\n${buildGitHubStatsMarkdown({ username, cards: ['trophy', 'activity'], theme: 'dracula', locale: 'en', hideBorder: true, hideTitle: false, languagesCount: 6, align: 'center' })}`,
+    build: (username: string) => `${buildCapsuleMarkdown({ type: 'waving', section: 'header', height: 170, theme: 'cobalt', color: '', text: 'Welcome', description: 'Developer profile', animation: 'fadeIn', fontColor: 'ffffff', fontSize: 54, fontAlign: 50, fontAlignY: 50, stroke: '', descSize: 20, descAlign: 50, descAlignY: 60, reverse: false })}\n\n${buildGitHubStatsMarkdown({ username, cards: ['trophy', 'activity'], theme: 'dracula', locale: 'en', hideBorder: true, hideTitle: false, languagesCount: 6, align: 'center' })}`,
   },
   {
     id: 'open-source',

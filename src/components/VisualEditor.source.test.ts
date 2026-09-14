@@ -10,4 +10,17 @@ describe('VisualEditor behavior wiring', () => {
     expect(source).toContain('readonly ref?: (handle: VisualEditorHandle) => void');
     expect(source).toContain("document.execCommand('insertHTML', false, markdownToVisualHtml(markdown))");
   });
+
+  test('offers undoable controls for the selected table cell', () => {
+    expect(source).toContain("type TableAction = 'add-row' | 'add-column' | 'delete-row' | 'delete-column' | 'clear-cell' | 'delete-table'");
+    expect(source).toContain('aria-label="Table controls"');
+    expect(source).toContain("editTable('add-row')");
+    expect(source).toContain("editTable('add-column')");
+    expect(source).toContain("editTable('delete-row')");
+    expect(source).toContain("editTable('delete-column')");
+    expect(source).toContain("editTable('clear-cell')");
+    expect(source).toContain("editTable('delete-table')");
+    expect(source).toContain("disabled={tableControls()?.isHeader}");
+    expect(source).toContain("document.execCommand('insertHTML', false, replacementHtml)");
+  });
 });
