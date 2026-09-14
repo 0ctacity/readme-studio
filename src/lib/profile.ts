@@ -93,6 +93,14 @@ function normalizeUsername(value: string): string {
   return value.trim().replace(/^@/, '').replace(/[^\w-]/g, '');
 }
 
+export function resolveProfileUsername(
+  configuredUsername: string,
+  connectedUsername?: string | null,
+  fallback = 'octocat',
+): string {
+  return normalizeUsername(connectedUsername ?? configuredUsername) || normalizeUsername(fallback);
+}
+
 function normalizeSlug(value: string): string {
   return value.trim().toLowerCase().replace(/[^a-z0-9+#.-]/g, '');
 }

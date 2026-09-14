@@ -18,6 +18,7 @@ import {
   buildSocialLinksMarkdown,
   buildTechStackMarkdown,
   buildTextMarkdown,
+  resolveProfileUsername,
   type Alignment,
   type ArcadeGame,
   type CapsuleShape,
@@ -46,7 +47,7 @@ const statsCards: readonly { id: StatsCard; label: string }[] = [
 ];
 
 export function ProfileInspector(props: ProfileInspectorProps) {
-  const [username, setUsername] = createSignal(props.currentUser?.login ?? '');
+  const [username, setUsername] = createSignal('');
   const [align, setAlign] = createSignal<Alignment>('center');
   const [imageUrl, setImageUrl] = createSignal('https://i.imgflip.com/65efzo.gif');
   const [imageAlt, setImageAlt] = createSignal('Profile animation');
@@ -89,14 +90,7 @@ export function ProfileInspector(props: ProfileInspectorProps) {
   const [loadingContributions, setLoadingContributions] = createSignal(false);
 
   createEffect(
-    () => [props.currentUser?.login, username()] as const,
-    ([currentUsername, configuredUsername]) => {
-      if (currentUsername && !configuredUsername) setUsername(currentUsername);
-    },
-  );
-
-  createEffect(
-    () => [username().trim() || props.currentUser?.login, props.tool, props.sessionToken] as const,
+    () => [resolveProfileUsername(username(), props.currentUser?.login), props.tool, props.sessionToken] as const,
     ([targetUser, tool, sessionToken]) => {
       if (!targetUser) {
         setRealMatrix(null);
@@ -113,7 +107,7 @@ export function ProfileInspector(props: ProfileInspectorProps) {
     },
   );
 
-  const effectiveUsername = createMemo(() => username().trim() || props.currentUser?.login || 'octocat');
+  const effectiveUsername = createMemo(() => resolveProfileUsername(username(), props.currentUser?.login));
 
   const generatedMarkdown = createMemo(() => {
     switch (props.tool) {
@@ -192,8 +186,12 @@ export function ProfileInspector(props: ProfileInspectorProps) {
   return (
     <div class="profile-tool">
       <Show when={props.tool === 'profile-template'}>
-        <p class="inspector-description">Start from a complete profile README. Enter a GitHub username first; choosing a template replaces the current document.</p>
-        <label>GitHub username<input value={username()} placeholder={props.currentUser?.login ?? 'octocat'} onInput={(event) => setUsername(event.currentTarget.value)} /></label>
+        <p class="inspector-description">Start from a complete profile README. Choosing a template replaces the current document.</p>
+        <Show when={props.currentUser} fallback={
+          <label>GitHub username<input value={username()} placeholder="octocat" onInput={(event) => setUsername(event.currentTarget.value)} /></label>
+        }>
+          <p class="github-identity-source">Using @{props.currentUser?.login} from your connected GitHub account.</p>
+        </Show>
         <div class="template-list">
           {PROFILE_TEMPLATES.map((template) => (
             <button disabled={!effectiveUsername()} onClick={() => props.onReplace(template.build(effectiveUsername()))}>
@@ -206,7 +204,11 @@ export function ProfileInspector(props: ProfileInspectorProps) {
 
       <Show when={props.tool !== 'profile-template'}>
         <Show when={needsUsername()}>
-          <label>GitHub username<input value={username()} placeholder={props.currentUser?.login ?? 'octocat'} onInput={(event) => setUsername(event.currentTarget.value)} /></label>
+          <Show when={props.currentUser} fallback={
+            <label>GitHub username<input value={username()} placeholder="octocat" onInput={(event) => setUsername(event.currentTarget.value)} /></label>
+          }>
+            <p class="github-identity-source">Using @{props.currentUser?.login} from your connected GitHub account.</p>
+          </Show>
         </Show>
 
         <Show when={props.tool === 'profile-image'}>

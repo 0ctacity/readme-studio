@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Readme Studio Privacy — Octacity</title>
+  <meta name="description" content="How Readme Studio handles local drafts, optional GitHub authorization, Cloudflare Worker requests, and external preview services.">
+  <link rel="canonical" href="https://0ctacity.github.io/readme-studio/privacy/">
+  <link rel="icon" href="/readme-studio/favicon.ico">
+  <link rel="stylesheet" href="/readme-studio/info.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/readme-studio/"><span class="brand-mark">R/</span><span>Readme Studio</span></a>
+    <nav class="site-nav" aria-label="Primary navigation">
+      <a href="/readme-studio/">Editor</a><a href="/readme-studio/about/">About</a><a href="/readme-studio/privacy/" aria-current="page">Privacy</a><a href="/readme-studio/contact/">Contact</a>
+    </nav>
+  </header>
+  <main class="page-shell">
+    <header class="page-hero">
+      <p class="eyebrow">Effective September 14, 2026</p>
+      <h1>Readme Studio Privacy</h1>
+      <p class="lede">Readme Studio is local first. You can write, preview, import, and export Markdown without creating an account or sending the draft to a Readme Studio application database.</p>
+    </header>
+    <article class="page-content">
+      <section class="content-section">
+        <h2>Data kept in your browser</h2>
+        <div class="content-copy"><p>The current README draft is automatically saved in local browser storage so it can survive a refresh or a later visit on the same browser profile. Readme Studio does not provide cloud draft synchronization. The site does not set its own application cookies.</p><p>If you connect GitHub, the browser also stores the GitHub account summary, an encrypted Readme Studio session token, and its expiration time. Temporary OAuth state and PKCE verification values are kept in session storage during sign-in. The application session expires after approximately 30 minutes. You can remove locally held information by signing out and clearing site data in your browser.</p></div>
+      </section>
+      <section class="content-section">
+        <h2>Optional GitHub access</h2>
+        <div class="content-copy"><p>GitHub authorization is not required for the core editor. If you choose to connect, GitHub asks you to approve repository and workflow access. The Cloudflare Worker exchanges the OAuth code, verifies the GitHub account, and returns a short-lived encrypted session token. The encrypted token contains the GitHub access credential and account identifiers needed to make authorized requests; it is stored by the browser and decrypted by the Worker when an authorized action is requested.</p><p>Depending on the action you choose, Readme Studio may request your account profile, repository list, repository README, or contribution data from GitHub. Publishing sends the selected repository, branch, commit message, README content, and generated workflow files through the Worker to GitHub. The Worker has no application database and does not intentionally persist these documents or GitHub credentials after processing the request.</p></div>
+      </section>
+      <section class="content-section">
+        <h2>Infrastructure and external content</h2>
+        <div class="content-copy"><p>The public application is hosted on GitHub Pages, and the optional API runs on Cloudflare Workers. Cloudflare observability is enabled for the Worker, so Cloudflare may process request metadata, operational logs, and error information according to the service configuration and Cloudflare’s terms. Access tokens and README contents are not deliberately written to application logs by Readme Studio.</p><p>README previews and builder tools can load images or generated content from third-party services such as Shields.io, GitHub, and profile-card providers. When the browser requests those resources, the provider may receive ordinary network information such as the IP address, user agent, requested URL, and referral information. Those requests are governed by the respective provider’s policies.</p></div>
+      </section>
+      <section class="content-section">
+        <h2>Your choices</h2>
+        <div class="content-copy"><ul><li>Use the editor without connecting GitHub.</li><li>Review GitHub’s authorization screen before granting access.</li><li>Sign out of Readme Studio and revoke the OAuth application from GitHub settings when access is no longer wanted.</li><li>Clear browser site data to remove the local draft and stored session information.</li><li>Avoid previewing third-party images when you do not want the browser to contact their providers.</li></ul><p class="callout">For privacy questions, use the guidance on the <a href="/readme-studio/contact/">contact page</a>. Never post OAuth codes, session tokens, private README content, or repository credentials in a public issue.</p></div>
+      </section>
+    </article>
+    <footer class="page-footer"><span>Readme Studio by Octacity</span><nav aria-label="Footer navigation"><a href="/readme-studio/about/">About</a><a href="/readme-studio/contact/">Contact</a><a href="https://github.com/0ctacity/readme-studio">GitHub</a></nav></footer>
+  </main>
+</body>
+</html>

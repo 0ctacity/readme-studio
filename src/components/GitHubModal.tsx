@@ -11,7 +11,6 @@ import {
 export type GitHubModalTab = 'open' | 'publish';
 
 interface GitHubModalProps {
-  readonly isOpen: boolean;
   readonly initialTab?: GitHubModalTab;
   readonly session: GitHubSessionData | null;
   readonly readmeContent: string;
@@ -39,7 +38,7 @@ export function GitHubModal(props: GitHubModalProps) {
   });
 
   createEffect(
-    () => (props.isOpen && repositories().length === 0 ? props.session : null),
+    () => (repositories().length === 0 ? props.session : null),
     (session) => {
       if (session) void loadRepos(session);
     },
@@ -108,8 +107,6 @@ export function GitHubModal(props: GitHubModalProps) {
     setSelectedRepo(repo);
     setBranch(repo.default_branch);
   }
-
-  if (!props.isOpen) return null;
 
   return (
     <div class="modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) props.onClose(); }}>

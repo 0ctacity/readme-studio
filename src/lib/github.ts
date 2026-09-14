@@ -21,6 +21,7 @@ export interface GitHubRepository {
 }
 
 export interface GitHubSessionData {
+  readonly expiresAt: string;
   readonly token: string;
   readonly user: GitHubUser;
 }
@@ -38,14 +39,101 @@ export interface PublishResult {
   readonly files: readonly { readonly path: string; readonly sha: string }[];
 }
 
+interface WorkerGitHubUser {
+  readonly avatarUrl: string;
+  readonly id: number;
+  readonly login: string;
+  readonly profileUrl: string;
+}
+
+interface WorkerGitHubRepository {
+  readonly archived: boolean;
+  readonly defaultBranch: string;
+  readonly description: string | null;
+  readonly fork: boolean;
+  readonly fullName: string;
+  readonly id: number;
+  readonly name: string;
+  readonly owner: string;
+  readonly private: boolean;
+  readonly pushedAt: string;
+  readonly url: string;
+}
+
+interface WorkerPublishedFile {
+  readonly commitSha: string;
+  readonly path: string;
+}
+
 const DEFAULT_API_BASE = 'https://readme-studio.rappeland2005.workers.dev';
 const AUTH_TOKEN_KEY = 'readme-studio:auth-token';
 const AUTH_USER_KEY = 'readme-studio:auth-user';
+const AUTH_EXPIRES_AT_KEY = 'readme-studio:auth-expires-at';
 const PKCE_VERIFIER_KEY = 'readme-studio:pkce-verifier';
 const OAUTH_STATE_KEY = 'readme-studio:oauth-state';
+export const SESSION_CLEARED_EVENT = 'readme-studio:session-cleared';
 
 // In-memory fallback storage for non-browser / test environments
 const memoryStorage = new Map<string, string>();
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isWorkerGitHubUser(value: unknown): value is WorkerGitHubUser {
+  return isRecord(value)
+    && typeof value.avatarUrl === 'string'
+    && typeof value.id === 'number'
+    && typeof value.login === 'string'
+    && typeof value.profileUrl === 'string';
+}
+
+function isWorkerGitHubRepository(value: unknown): value is WorkerGitHubRepository {
+  return isRecord(value)
+    && typeof value.archived === 'boolean'
+    && typeof value.defaultBranch === 'string'
+    && (typeof value.description === 'string' || value.description === null)
+    && typeof value.fork === 'boolean'
+    && typeof value.fullName === 'string'
+    && typeof value.id === 'number'
+    && typeof value.name === 'string'
+    && typeof value.owner === 'string'
+    && typeof value.private === 'boolean'
+    && typeof value.pushedAt === 'string'
+    && typeof value.url === 'string';
+}
+
+function isWorkerPublishedFile(value: unknown): value is WorkerPublishedFile {
+  return isRecord(value)
+    && typeof value.commitSha === 'string'
+    && typeof value.path === 'string';
+}
+
+function normalizeUser(user: WorkerGitHubUser): GitHubUser {
+  return {
+    avatar_url: user.avatarUrl,
+    html_url: user.profileUrl,
+    id: user.id,
+    login: user.login,
+    name: null,
+  };
+}
+
+function normalizeRepository(repository: WorkerGitHubRepository): GitHubRepository {
+  return {
+    archived: repository.archived,
+    default_branch: repository.defaultBranch,
+    description: repository.description,
+    fork: repository.fork,
+    full_name: repository.fullName,
+    html_url: repository.url,
+    id: repository.id,
+    name: repository.name,
+    owner: { login: repository.owner },
+    private: repository.private,
+    pushed_at: repository.pushedAt,
+  };
+}
 
 function getLocalStorage(): { getItem: (k: string) => string | null; setItem: (k: string, v: string) => void; removeItem: (k: string) => void } {
   if (typeof window !== 'undefined' && window.localStorage) {
@@ -68,30 +156,39 @@ export function getApiBaseUrl(): string {
   return DEFAULT_API_BASE;
 }
 
-export function getStoredSession(): GitHubSessionData | null {
+export function getStoredSession(now = Date.now()): GitHubSessionData | null {
   const storage = getLocalStorage();
   const token = storage.getItem(AUTH_TOKEN_KEY);
   const userJson = storage.getItem(AUTH_USER_KEY);
-  if (!token || !userJson) return null;
+  const expiresAt = storage.getItem(AUTH_EXPIRES_AT_KEY);
+  if (!token || !userJson || !expiresAt || Date.parse(expiresAt) <= now) {
+    clearStoredSession(false);
+    return null;
+  }
   try {
     const user = JSON.parse(userJson) as GitHubUser;
-    return { token, user };
+    return { expiresAt, token, user };
   } catch {
-    clearStoredSession();
+    clearStoredSession(false);
     return null;
   }
 }
 
 export function saveStoredSession(session: GitHubSessionData): void {
   const storage = getLocalStorage();
+  storage.setItem(AUTH_EXPIRES_AT_KEY, session.expiresAt);
   storage.setItem(AUTH_TOKEN_KEY, session.token);
   storage.setItem(AUTH_USER_KEY, JSON.stringify(session.user));
 }
 
-export function clearStoredSession(): void {
+export function clearStoredSession(announce = true): void {
   const storage = getLocalStorage();
+  storage.removeItem(AUTH_EXPIRES_AT_KEY);
   storage.removeItem(AUTH_TOKEN_KEY);
   storage.removeItem(AUTH_USER_KEY);
+  if (announce && typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+    window.dispatchEvent(new Event(SESSION_CLEARED_EVENT));
+  }
 }
 
 function base64UrlEncode(bytes: Uint8Array): string {
@@ -163,15 +260,27 @@ export async function handleOAuthCallback(apiBase = getApiBaseUrl()): Promise<Gi
   const response = await fetch(`${apiBase}/auth/github/exchange`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code, code_verifier: codeVerifier, state }),
+    body: JSON.stringify({ code, codeVerifier }),
   });
 
   if (!response.ok) {
     throw new Error('Failed to exchange authorization code with backend worker.');
   }
 
-  const data = (await response.json()) as { token: string; user: GitHubUser };
-  const session: GitHubSessionData = { token: data.token, user: data.user };
+  const data: unknown = await response.json();
+  if (!isRecord(data)
+    || typeof data.expiresAt !== 'string'
+    || !Number.isFinite(Date.parse(data.expiresAt))
+    || typeof data.sessionToken !== 'string'
+    || !isWorkerGitHubUser(data.user)) {
+    throw new Error('The backend worker returned an invalid GitHub session.');
+  }
+
+  const session: GitHubSessionData = {
+    expiresAt: data.expiresAt,
+    token: data.sessionToken,
+    user: normalizeUser(data.user),
+  };
   saveStoredSession(session);
   return session;
 }
@@ -180,17 +289,23 @@ export async function fetchUserRepositories(
   token: string,
   apiBase = getApiBaseUrl(),
 ): Promise<readonly GitHubRepository[]> {
-  const response = await fetch(`${apiBase}/github/repositories`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-
-  if (!response.ok) {
-    if (response.status === 401) clearStoredSession();
-    throw new Error(`Failed to load repositories (${response.status})`);
+  const repositories: GitHubRepository[] = [];
+  for (let page = 1; page <= 100; page += 1) {
+    const response = await fetch(`${apiBase}/api/github/repositories?page=${page}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) {
+      if (response.status === 401) clearStoredSession();
+      throw new Error(`Failed to load repositories (${response.status})`);
+    }
+    const data: unknown = await response.json();
+    if (!isRecord(data) || !Array.isArray(data.repositories) || !data.repositories.every(isWorkerGitHubRepository)) {
+      throw new Error('The backend worker returned an invalid repository list.');
+    }
+    repositories.push(...data.repositories.map(normalizeRepository));
+    if (data.repositories.length < 100) break;
   }
-
-  const data = (await response.json()) as { repositories: readonly GitHubRepository[] };
-  return data.repositories;
+  return repositories;
 }
 
 export async function fetchRepositoryReadme(
@@ -200,18 +315,33 @@ export async function fetchRepositoryReadme(
   branch?: string,
   apiBase = getApiBaseUrl(),
 ): Promise<ReadmeFileResult> {
-  const url = new URL(`${apiBase}/github/repositories/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/readme`);
-  if (branch) url.searchParams.set('branch', branch);
+  const url = new URL(`${apiBase}/api/github/repositories/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/readme`);
+  if (branch) url.searchParams.set('ref', branch);
 
   const response = await fetch(url.toString(), {
     headers: { Authorization: `Bearer ${token}` },
   });
 
   if (!response.ok) {
+    if (response.status === 401) clearStoredSession();
     throw new Error(`Failed to fetch repository README (${response.status})`);
   }
 
-  return (await response.json()) as ReadmeFileResult;
+  const data: unknown = await response.json();
+  if (!isRecord(data)
+    || typeof data.branch !== 'string'
+    || typeof data.markdown !== 'string'
+    || typeof data.path !== 'string'
+    || typeof data.sha !== 'string') {
+    throw new Error('The backend worker returned an invalid README.');
+  }
+
+  return {
+    branch: data.branch,
+    content: data.markdown,
+    path: data.path,
+    sha: data.sha,
+  };
 }
 
 export async function publishReadmeToRepository(
@@ -226,7 +356,7 @@ export async function publishReadmeToRepository(
   },
   apiBase = getApiBaseUrl(),
 ): Promise<PublishResult> {
-  const url = `${apiBase}/github/repositories/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/publish`;
+  const url = `${apiBase}/api/github/publish`;
   const response = await fetch(url, {
     method: 'POST',
     headers: {
@@ -235,16 +365,32 @@ export async function publishReadmeToRepository(
     },
     body: JSON.stringify({
       branch: options.branch,
-      commitMessage: options.commitMessage,
-      readmeContent: options.readmeContent,
-      workflowFiles: options.workflowFiles ?? [],
+      message: options.commitMessage,
+      owner,
+      readme: options.readmeContent,
+      repository: repo,
+      workflows: options.workflowFiles ?? [],
     }),
   });
 
   if (!response.ok) {
+    if (response.status === 401) clearStoredSession();
     const errorJson = (await response.json().catch(() => null)) as { error?: { message?: string } } | null;
     throw new Error(errorJson?.error?.message ?? `Failed to publish to repository (${response.status})`);
   }
 
-  return (await response.json()) as PublishResult;
+  const data: unknown = await response.json();
+  if (!isRecord(data)
+    || typeof data.branch !== 'string'
+    || typeof data.repository !== 'string'
+    || !Array.isArray(data.files)
+    || !data.files.every(isWorkerPublishedFile)) {
+    throw new Error('The backend worker returned an invalid publish result.');
+  }
+
+  return {
+    branch: data.branch,
+    files: data.files.map((file) => ({ path: file.path, sha: file.commitSha })),
+    repository: data.repository,
+  };
 }

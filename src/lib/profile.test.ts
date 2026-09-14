@@ -17,9 +17,16 @@ import {
   buildTechStackMarkdown,
   buildTextMarkdown,
   getRequiredProfileFiles,
+  resolveProfileUsername,
 } from './profile';
 
 describe('profile README generators', () => {
+  test('uses the connected GitHub account instead of asking for a widget username', () => {
+    expect(resolveProfileUsername('manually-entered', 'signed-in-user')).toBe('signed-in-user');
+    expect(resolveProfileUsername('manually-entered')).toBe('manually-entered');
+    expect(resolveProfileUsername('', undefined, 'octocat')).toBe('octocat');
+  });
+
   test('exposes the complete profile builder catalog without Spotify', () => {
     expect(PROFILE_TOOL_CATALOG.map(({ id }) => id)).toEqual([
       'profile-template',

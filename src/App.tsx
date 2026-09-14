@@ -1,16 +1,17 @@
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
-import { createEffect, createMemo, createSignal, onCleanup, Show } from 'solid-js';
+import { createEffect, createMemo, createSignal, onSettled, Show } from 'solid-js';
 import './App.css';
 import { GitHubModal, type GitHubModalTab } from './components/GitHubModal';
 import { ProfileInspector } from './components/ProfileInspector';
-import { VisualEditor } from './components/VisualEditor';
+import { VisualEditor, type VisualEditorHandle } from './components/VisualEditor';
 import { getGameDataUri } from './lib/arcade-preview';
 import { fetchRealGitHubContributions, getCachedContributions } from './lib/contributions';
 import {
   clearStoredSession,
   getStoredSession,
   handleOAuthCallback,
+  SESSION_CLEARED_EVENT,
   startGitHubLogin,
   type GitHubSessionData,
 } from './lib/github';
@@ -142,6 +143,7 @@ function App() {
   const [activityRefresh, setActivityRefresh] = createSignal(0);
 
   let editor: HTMLTextAreaElement | undefined;
+  let visualEditor: VisualEditorHandle | undefined;
   let fileInput!: HTMLInputElement;
 
   marked.setOptions({ gfm: true, breaks: false });
@@ -154,6 +156,17 @@ function App() {
         .then(() => setActivityRefresh((v) => v + 1))
         .catch(() => {});
     }
+  });
+
+  createEffect(session, (currentSession) => {
+    if (typeof window === 'undefined' || !currentSession) return;
+    const expiresIn = Date.parse(currentSession.expiresAt) - Date.now();
+    if (expiresIn <= 0) {
+      clearStoredSession();
+      return;
+    }
+    const timer = window.setTimeout(() => clearStoredSession(), Math.min(expiresIn, 2_147_483_647));
+    return () => window.clearTimeout(timer);
   });
 
   // Client-side initialization
@@ -171,6 +184,16 @@ function App() {
 
   }
 
+  onSettled(() => {
+    if (typeof window === 'undefined') return;
+    const handleSessionCleared = () => {
+      setSession(null);
+      setGitHubModalOpen(false);
+    };
+    window.addEventListener(SESSION_CLEARED_EVENT, handleSessionCleared);
+    return () => window.removeEventListener(SESSION_CLEARED_EVENT, handleSessionCleared);
+  });
+
   // Auto-save effect
   createEffect(markdown, (value) => {
     if (typeof window === 'undefined') return;
@@ -181,7 +204,7 @@ function App() {
       setSaved(true);
     }, 450);
 
-    onCleanup(() => window.clearTimeout(timer));
+    return () => window.clearTimeout(timer);
   });
 
   const renderedMarkdown = createMemo(() => {
@@ -261,15 +284,18 @@ function App() {
   }
 
   function applyInsertion(before: string, after = '', placeholder = ''): void {
-    if (editor) {
+    if (editorStyle() === 'plain' && editor?.isConnected) {
       const start = editor.selectionStart ?? editor.value.length;
       const end = editor.selectionEnd ?? start;
       const result = insertText(editor.value, start, end, before, after, placeholder);
       const replacement = result.value.slice(start, result.selectionEnd + after.length);
       replaceEditorRange(replacement, start, end, result.selectionStart, result.selectionEnd);
-    } else {
-      setMarkdown((current) => `${current}\n\n${before}${placeholder}${after}\n\n`);
+      return;
     }
+
+    const insertion = `${before}${placeholder}${after}`;
+    if (visualEditor?.insertMarkdown(insertion)) return;
+    setMarkdown((current) => `${current}\n\n${insertion}\n\n`);
   }
 
   function replaceEditorRange(
@@ -279,7 +305,7 @@ function App() {
     selectionStart: number,
     selectionEnd: number,
   ): void {
-    if (editor) {
+    if (editorStyle() === 'plain' && editor?.isConnected) {
       editor.focus();
       editor.setSelectionRange(start, end);
 
@@ -471,10 +497,11 @@ function App() {
                 />
               }>
                 <VisualEditor
-                  markdown={markdown()}
+                  ref={(handle) => { visualEditor = handle; }}
+                  markdown={() => markdown()}
                   onChange={(newMd) => {
                     setMarkdown(newMd);
-                    if (editor) editor.value = newMd;
+                    if (editor?.isConnected) editor.value = newMd;
                   }}
                   onOpenBadgeTool={() => selectTool('badge')}
                 />
@@ -582,6 +609,11 @@ function App() {
                 </div>
               </Show>
               <section class="compatibility"><h3>Target environment</h3><p>Optimized for GitHub Flavored Markdown (GFM) and GitHub repository/profile displays.</p></section>
+              <nav class="project-links" aria-label="Readme Studio information">
+                <a href="/readme-studio/about/">About</a>
+                <a href="/readme-studio/privacy/">Privacy</a>
+                <a href="/readme-studio/contact/">Contact</a>
+              </nav>
             </Show>
           </div>
         </aside>
@@ -592,17 +624,18 @@ function App() {
       <Show when={draggingFile()}><div class="drop-overlay"><div><span aria-hidden="true">↓</span><strong>Drop your Markdown file here</strong><small>Imports .md and .markdown documents</small></div></div></Show>
 
       {/* GitHub Integration Modal */}
-      <GitHubModal
-        isOpen={gitHubModalOpen()}
-        initialTab={gitHubModalTab()}
-        session={session()}
-        readmeContent={markdown()}
-        workflowFiles={requiredProfileFiles()}
-        onClose={() => setGitHubModalOpen(false)}
-        onLogin={() => startGitHubLogin()}
-        onLogout={handleLogoutGitHub}
-        onLoadReadme={handleLoadedReadme}
-      />
+      <Show when={gitHubModalOpen()}>
+        <GitHubModal
+          initialTab={gitHubModalTab()}
+          session={session()}
+          readmeContent={markdown()}
+          workflowFiles={requiredProfileFiles()}
+          onClose={() => setGitHubModalOpen(false)}
+          onLogin={() => startGitHubLogin()}
+          onLogout={handleLogoutGitHub}
+          onLoadReadme={handleLoadedReadme}
+        />
+      </Show>
     </div>
   );
 }

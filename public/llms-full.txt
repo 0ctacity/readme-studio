@@ -11,12 +11,12 @@
 - License: MIT
 - Tech Stack: SolidJS 2.0, TypeScript 5.9, Vite 8.x, Bun
 
-Readme Studio is a client-side web application for creating, editing, and exporting GitHub repository and profile README files.
+Readme Studio is a local-first web application for creating, editing, and exporting GitHub repository and profile README files. Optional GitHub access is handled by a stateless Cloudflare Worker.
 
 ## Features & Markdown Syntax Generation
 
 ### 1. Markdown Editor & GFM Preview
-- Provides dual-pane editing with GitHub Flavored Markdown (GFM) rendering.
+- Provides focused editor and preview modes with GitHub Flavored Markdown (GFM) rendering.
 - DOMPurify HTML sanitization with safe data URI support for animated graphics.
 - Automatic draft saving to browser localStorage (`readme-studio:draft`).
 - Drag-and-drop import for `.md` and `.markdown` files.
@@ -53,3 +53,11 @@ Generates standard and dynamic Shields.io markdown links:
 - Robots: https://0ctacity.github.io/readme-studio/robots.txt
 - Markdown README: https://0ctacity.github.io/readme-studio/README.md
 - 404 Error Recovery: https://0ctacity.github.io/readme-studio/404.html
+
+## Product Information and Trust
+
+- About: https://0ctacity.github.io/readme-studio/about/
+- Privacy: https://0ctacity.github.io/readme-studio/privacy/
+- Contact and support: https://0ctacity.github.io/readme-studio/contact/
+
+Readme Studio is best suited to interactive README authoring and generation. It does not provide collaborative editing, cloud draft synchronization, or a general-purpose API for autonomous document editing. GitHub authorization is optional and is only required for repository-backed actions.

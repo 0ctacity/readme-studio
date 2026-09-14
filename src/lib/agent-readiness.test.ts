@@ -12,6 +12,9 @@ describe('Agent readiness & Discoverability', () => {
     expect(llmsTxt).toContain('## Core Resources');
     expect(llmsTxt).toContain('https://0ctacity.github.io/readme-studio/');
     expect(llmsTxt).toContain('llms-full.txt');
+    expect(llmsTxt).toContain('## When to use Readme Studio');
+    expect(llmsTxt).toContain('## Limitations');
+    expect(llmsTxt).toContain('optional GitHub authorization');
 
     const llmsFull = fs.readFileSync(path.join(publicDir, 'llms-full.txt'), 'utf-8');
     expect(llmsFull).toContain('# Readme Studio by Octacity — Full Agent Documentation');
@@ -44,5 +47,39 @@ describe('Agent readiness & Discoverability', () => {
     expect(docSource).toContain('application/ld+json');
     expect(docSource).toContain('type="text/markdown"');
     expect(docSource).toContain('llms.txt');
+    expect(docSource).toContain('class="agent-homepage"');
+    expect(docSource).toContain('<h1>Build a better GitHub README</h1>');
+    expect(docSource).toContain('Privacy</a>');
+    expect(docSource).toContain('property="og:image"');
+    expect(docSource).toContain('name="twitter:image"');
+  });
+
+  test('publishes substantive About, Contact, and Privacy pages', () => {
+    const expectedPages = [
+      ['about', 'About Readme Studio'],
+      ['contact', 'Contact Readme Studio'],
+      ['privacy', 'Readme Studio Privacy'],
+    ] as const;
+
+    for (const [directory, heading] of expectedPages) {
+      const page = fs.readFileSync(path.join(publicDir, directory, 'index.html'), 'utf-8');
+      const readableText = page
+        .replace(/<style[\s\S]*?<\/style>/g, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      expect(page).toContain(`<h1>${heading}</h1>`);
+      expect(page).toContain(`rel="canonical" href="https://0ctacity.github.io/readme-studio/${directory}/"`);
+      expect(page).toContain('href="/readme-studio/"');
+      expect(readableText.length).toBeGreaterThan(500);
+    }
+  });
+
+  test('provides a 1200 by 630 social preview image', () => {
+    const image = fs.readFileSync(path.join(publicDir, 'social-card.png'));
+    expect(image.subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+    expect(image.readUInt32BE(16)).toBe(1200);
+    expect(image.readUInt32BE(20)).toBe(630);
   });
 });

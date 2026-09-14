@@ -1,12 +1,17 @@
-import { createEffect, createSignal, Show } from 'solid-js';
+import { createEffect, createSignal, Show, type Accessor } from 'solid-js';
 import { markdownToVisualHtml, visualHtmlToMarkdown } from '../lib/editor-converter';
 
 export interface VisualEditorProps {
-  readonly markdown: string;
+  readonly markdown: Accessor<string>;
   readonly onChange: (markdown: string) => void;
+  readonly ref?: (handle: VisualEditorHandle) => void;
   readonly onOpenBadgeTool?: () => void;
   readonly onOpenArcadeTool?: () => void;
   readonly onOpenStatsTool?: () => void;
+}
+
+export interface VisualEditorHandle {
+  readonly insertMarkdown: (markdown: string) => boolean;
 }
 
 interface SlashCommand {
@@ -21,7 +26,9 @@ export function VisualEditor(props: VisualEditorProps) {
   let editorRef: HTMLDivElement | undefined;
   let isInternalUpdate = false;
   let updateTimer: number | undefined;
+  let lastSelection: Range | undefined;
 
+  const [editorElement, setEditorElement] = createSignal<HTMLDivElement>();
   const [slashQuery, setSlashQuery] = createSignal('');
   const [slashOpen, setSlashOpen] = createSignal(false);
   const [slashPos, setSlashPos] = createSignal({ top: 0, left: 0 });
@@ -108,15 +115,17 @@ export function VisualEditor(props: VisualEditorProps) {
     );
   };
 
-  createEffect(() => props.markdown, (newMarkdown) => {
+  createEffect(() => [props.markdown(), editorElement()] as const, ([newMarkdown, element]) => {
     if (isInternalUpdate) return;
-    if (editorRef) {
-      const currentMarkdown = visualHtmlToMarkdown(editorRef.innerHTML);
+    if (element) {
+      const currentMarkdown = visualHtmlToMarkdown(element.innerHTML);
       if (currentMarkdown.trim() !== newMarkdown.trim()) {
-        editorRef.innerHTML = markdownToVisualHtml(newMarkdown);
+        element.innerHTML = markdownToVisualHtml(newMarkdown);
       }
     }
   });
+
+  props.ref?.({ insertMarkdown });
 
   function triggerSync() {
     isInternalUpdate = true;
@@ -128,6 +137,34 @@ export function VisualEditor(props: VisualEditorProps) {
       }
       isInternalUpdate = false;
     }, 150);
+  }
+
+  function captureSelection(): void {
+    const selection = window.getSelection();
+    if (!editorRef || !selection || selection.rangeCount === 0) return;
+    const range = selection.getRangeAt(0);
+    if (editorRef.contains(range.commonAncestorContainer)) {
+      lastSelection = range.cloneRange();
+    }
+  }
+
+  function restoreSelection(): void {
+    if (!lastSelection) return;
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(lastSelection);
+  }
+
+  function insertMarkdown(markdown: string): boolean {
+    if (!editorRef) return false;
+    editorRef.focus();
+    restoreSelection();
+    const inserted = document.execCommand('insertHTML', false, markdownToVisualHtml(markdown));
+    if (inserted) {
+      captureSelection();
+      triggerSync();
+    }
+    return inserted;
   }
 
   function exec(command: string, value?: string) {
@@ -191,6 +228,7 @@ export function VisualEditor(props: VisualEditorProps) {
   }
 
   function handleInput() {
+    captureSelection();
     const selection = window.getSelection();
     if (selection && selection.rangeCount > 0) {
       const node = selection.anchorNode;
@@ -339,15 +377,16 @@ export function VisualEditor(props: VisualEditorProps) {
         <div
           ref={(element) => {
             editorRef = element;
-            if (element) {
-              element.innerHTML = markdownToVisualHtml(props.markdown);
-            }
+            setEditorElement(element);
           }}
           class="visual-editor-canvas markdown-body"
           contenteditable={true}
           spellcheck={false}
           onInput={handleInput}
           onKeyDown={handleKeyDown}
+          onKeyUp={captureSelection}
+          onMouseUp={captureSelection}
+          onBlur={captureSelection}
           aria-label="Visual README Canvas"
         />
       </div>

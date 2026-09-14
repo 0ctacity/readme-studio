@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import {
+  fetchRealGitHubContributions,
   mapLevelToScore,
   parseWeeksToMatrix,
   setCachedContributions,
@@ -36,5 +37,54 @@ describe('Contributions helper', () => {
     setCachedContributions('testuser', sampleMatrix);
     expect(getCachedContributions('testuser')).toEqual(sampleMatrix);
     expect(getCachedContributions('TESTUSER')).toEqual(sampleMatrix);
+  });
+
+  test('uses the Worker for authenticated contribution data', async () => {
+    const originalFetch = globalThis.fetch;
+    const requests: Request[] = [];
+    Object.defineProperty(globalThis, 'fetch', {
+      configurable: true,
+      value: async (input: RequestInfo | URL, init?: RequestInit) => {
+        const request = new Request(input, init);
+        requests.push(request);
+        return Response.json({
+          weeks: [{ contributionDays: [{ contributionCount: 4, contributionLevel: 'SECOND_QUARTILE' }] }],
+        });
+      },
+      writable: true,
+    });
+
+    try {
+      const matrix = await fetchRealGitHubContributions('worker-user', 'app-session', 'https://api.example');
+      expect(matrix?.[0]?.[0]).toBe(2);
+      expect(requests[0]?.url).toBe('https://api.example/api/github/contributions/worker-user');
+      expect(requests[0]?.headers.get('authorization')).toBe('Bearer app-session');
+    } finally {
+      Object.defineProperty(globalThis, 'fetch', { configurable: true, value: originalFetch, writable: true });
+    }
+  });
+
+  test('refreshes a public cache entry when an authenticated session is available', async () => {
+    const originalFetch = globalThis.fetch;
+    setCachedContributions('authenticated-user', [[1]]);
+    let requests = 0;
+    Object.defineProperty(globalThis, 'fetch', {
+      configurable: true,
+      value: async () => {
+        requests += 1;
+        return Response.json({
+          weeks: [{ contributionDays: [{ contributionCount: 12, contributionLevel: 'FOURTH_QUARTILE' }] }],
+        });
+      },
+      writable: true,
+    });
+
+    try {
+      const matrix = await fetchRealGitHubContributions('authenticated-user', 'app-session', 'https://api.example');
+      expect(matrix?.[0]?.[0]).toBe(4);
+      expect(requests).toBe(1);
+    } finally {
+      Object.defineProperty(globalThis, 'fetch', { configurable: true, value: originalFetch, writable: true });
+    }
   });
 });

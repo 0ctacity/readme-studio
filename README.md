@@ -20,7 +20,7 @@
 ## ✨ Features
 
 ### 📝 Real-Time Markdown Editing & GitHub Preview
-- **Split-view & Full-preview modes**: Write GFM (GitHub Flavored Markdown) and see instant sanitized rendering.
+- **Focused editor & preview modes**: Write GFM (GitHub Flavored Markdown) or switch to a full-width sanitized preview.
 - **Local persistence**: Automatic auto-save to browser local storage so your work is never lost.
 - **Drag & drop imports**: Drop any `.md` file directly into the studio to edit existing documentation.
 - **Document quality checks**: Real-time linting for document titles (H1), image alt text accessibility, and duplicate headings.
@@ -90,7 +90,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 Readme Studio builds into a **pure static client** (`dist/client`).
 
-The repository is configured with an automated GitHub Actions deployment workflow ([`.github/workflows/deploy.yml`](file:///Users/atasesli/Desktop/VsCode/readme-studio/.github/workflows/deploy.yml)).
+The repository is configured with an automated [GitHub Actions deployment workflow](https://github.com/0ctacity/readme-studio/blob/main/.github/workflows/deploy.yml).
 
 Whenever changes are pushed to the `main` branch:
 1. Bun installs dependencies.

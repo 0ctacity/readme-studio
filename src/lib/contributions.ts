@@ -1,3 +1,5 @@
+import { clearStoredSession, getApiBaseUrl } from './github';
+
 export type ContributionLevel = 0 | 1 | 2 | 3 | 4;
 
 export interface ContributionDay {
@@ -62,61 +64,28 @@ export function parseWeeksToMatrix(
 export async function fetchRealGitHubContributions(
   username: string,
   token?: string,
+  apiBase = getApiBaseUrl(),
 ): Promise<ContributionMatrix | null> {
   const cleanUsername = username.trim().toLowerCase();
   if (!cleanUsername) return null;
 
-  if (contributionCache.has(cleanUsername)) {
-    return contributionCache.get(cleanUsername)!;
-  }
-
-  // Strategy 1: Fetch via GitHub GraphQL API if user has a session token
+  // Strategy 1: Fetch through the Worker, which can unwrap the app session safely.
   if (token) {
     try {
-      const graphqlQuery = {
-        query: `
-          query($login: String!) {
-            user(login: $login) {
-              contributionsCollection {
-                contributionCalendar {
-                  weeks {
-                    contributionDays {
-                      contributionLevel
-                      contributionCount
-                    }
-                  }
-                }
-              }
-            }
-          }
-        `,
-        variables: { login: cleanUsername },
-      };
-
-      const response = await fetch('https://api.github.com/graphql', {
-        method: 'POST',
+      const response = await fetch(`${apiBase}/api/github/contributions/${encodeURIComponent(cleanUsername)}`, {
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'User-Agent': 'readme-studio',
         },
-        body: JSON.stringify(graphqlQuery),
       });
+
+      if (response.status === 401) clearStoredSession();
 
       if (response.ok) {
         const result = (await response.json()) as {
-          data?: {
-            user?: {
-              contributionsCollection?: {
-                contributionCalendar?: {
-                  weeks?: { contributionDays: { contributionLevel: string; contributionCount: number }[] }[];
-                };
-              };
-            };
-          };
+          weeks?: { contributionDays: { contributionLevel: string; contributionCount: number }[] }[];
         };
 
-        const weeks = result.data?.user?.contributionsCollection?.contributionCalendar?.weeks;
+        const weeks = result.weeks;
         if (weeks && Array.isArray(weeks) && weeks.length > 0) {
           const matrix = parseWeeksToMatrix(weeks);
           contributionCache.set(cleanUsername, matrix);
@@ -126,6 +95,10 @@ export async function fetchRealGitHubContributions(
     } catch {
       // Fall through to public proxy strategy
     }
+  }
+
+  if (contributionCache.has(cleanUsername)) {
+    return contributionCache.get(cleanUsername)!;
   }
 
   // Strategy 2: Fetch via public GitHub contribution aggregator API

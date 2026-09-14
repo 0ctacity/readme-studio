@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title description">
+  <title id="title">Readme Studio by Octacity</title>
+  <desc id="description">A stylized README workbench with a toolbox, Markdown editor, and document inspector.</desc>
+  <rect width="1200" height="630" fill="#17211c"/>
+  <rect x="42" y="42" width="1116" height="546" rx="12" fill="#e8e9e2"/>
+
+  <rect x="42" y="42" width="1116" height="78" rx="12" fill="#17211c"/>
+  <rect x="42" y="106" width="1116" height="14" fill="#17211c"/>
+  <rect x="74" y="64" width="36" height="36" rx="8" fill="#ed6338"/>
+  <text x="92" y="87" text-anchor="middle" fill="#17211c" font-family="ui-monospace, Menlo, monospace" font-size="14" font-weight="800">R/</text>
+  <text x="127" y="89" fill="#fbfaf5" font-family="Georgia, serif" font-size="26" font-weight="700">Readme Studio</text>
+  <text x="1125" y="86" text-anchor="end" fill="#9ca69f" font-family="ui-monospace, Menlo, monospace" font-size="13">README.md  •  saved locally</text>
+
+  <rect x="66" y="144" width="216" height="420" rx="6" fill="#f1f1eb" stroke="#c8cbc2"/>
+  <text x="88" y="178" fill="#b94322" font-family="ui-monospace, Menlo, monospace" font-size="11" font-weight="800" letter-spacing="1.5">TOOLBOX</text>
+  <text x="88" y="210" fill="#17211c" font-family="Georgia, serif" font-size="26" font-weight="700">Build blocks</text>
+  <g font-family="ui-monospace, Menlo, monospace" font-size="12" font-weight="700">
+    <rect x="88" y="242" width="78" height="58" rx="5" fill="#fffaf4" stroke="#ed6338"/>
+    <text x="102" y="266" fill="#b94322">H1</text><text x="102" y="287" fill="#4d5650">Heading</text>
+    <rect x="177" y="242" width="78" height="58" rx="5" fill="#fbfaf5" stroke="#d0d3ca"/>
+    <text x="191" y="266" fill="#b94322">↗</text><text x="191" y="287" fill="#4d5650">Link</text>
+    <rect x="88" y="311" width="78" height="58" rx="5" fill="#fbfaf5" stroke="#d0d3ca"/>
+    <text x="102" y="335" fill="#b94322">IMG</text><text x="102" y="356" fill="#4d5650">Image</text>
+    <rect x="177" y="311" width="78" height="58" rx="5" fill="#fbfaf5" stroke="#d0d3ca"/>
+    <text x="191" y="335" fill="#b94322">&lt;/&gt;</text><text x="191" y="356" fill="#4d5650">Code</text>
+  </g>
+  <rect x="88" y="399" width="167" height="34" rx="4" fill="#17211c"/>
+  <text x="171" y="421" text-anchor="middle" fill="#fbfaf5" font-family="Arial, sans-serif" font-size="12" font-weight="700">Shields.io badges</text>
+
+  <rect x="304" y="144" width="566" height="420" rx="6" fill="#1f2924" stroke="#354139"/>
+  <text x="340" y="193" fill="#ed6338" font-family="ui-monospace, Menlo, monospace" font-size="18" font-weight="700">#</text>
+  <text x="370" y="193" fill="#f3f1e9" font-family="Georgia, serif" font-size="34" font-weight="700">Build better READMEs</text>
+  <rect x="340" y="216" width="474" height="2" fill="#ed6338"/>
+  <text x="340" y="256" fill="#b9c3bd" font-family="ui-monospace, Menlo, monospace" font-size="15">Markdown stays the source of truth.</text>
+  <text x="340" y="301" fill="#ed6338" font-family="ui-monospace, Menlo, monospace" font-size="16" font-weight="700">##</text>
+  <text x="379" y="301" fill="#e9ece8" font-family="Georgia, serif" font-size="25" font-weight="700">Fast GitHub workflow</text>
+  <g fill="#aeb9b2" font-family="ui-monospace, Menlo, monospace" font-size="14">
+    <text x="340" y="340">- focused editor and preview</text>
+    <text x="340" y="372">- dynamic badges and profile widgets</text>
+    <text x="340" y="404">- local drafts, optional GitHub access</text>
+  </g>
+  <rect x="340" y="442" width="404" height="74" rx="5" fill="#17211c" stroke="#3a473f"/>
+  <text x="363" y="473" fill="#7fca83" font-family="ui-monospace, Menlo, monospace" font-size="13">$ export README.md</text>
+  <text x="363" y="496" fill="#86928b" font-family="ui-monospace, Menlo, monospace" font-size="12">ready for GitHub</text>
+
+  <rect x="892" y="144" width="242" height="420" rx="6" fill="#eeefe8" stroke="#c8cbc2"/>
+  <text x="916" y="178" fill="#b94322" font-family="ui-monospace, Menlo, monospace" font-size="11" font-weight="800" letter-spacing="1.5">INSPECTOR</text>
+  <text x="916" y="210" fill="#17211c" font-family="Georgia, serif" font-size="26" font-weight="700">Document</text>
+  <line x1="916" y1="232" x2="1110" y2="232" stroke="#d0d3ca"/>
+  <g font-family="Arial, sans-serif">
+    <text x="916" y="269" fill="#6b726d" font-size="11" font-weight="700">README CHECKS</text>
+    <circle cx="926" cy="298" r="9" fill="#5e8a63"/><text x="926" y="302" text-anchor="middle" fill="#fff" font-size="10" font-weight="700">✓</text><text x="945" y="303" fill="#3f4943" font-size="13">Document title</text>
+    <circle cx="926" cy="334" r="9" fill="#5e8a63"/><text x="926" y="338" text-anchor="middle" fill="#fff" font-size="10" font-weight="700">✓</text><text x="945" y="339" fill="#3f4943" font-size="13">Image alt text</text>
+    <circle cx="926" cy="370" r="9" fill="#5e8a63"/><text x="926" y="374" text-anchor="middle" fill="#fff" font-size="10" font-weight="700">✓</text><text x="945" y="375" fill="#3f4943" font-size="13">Unique headings</text>
+  </g>
+  <rect x="916" y="417" width="194" height="44" rx="4" fill="#ed6338"/>
+  <text x="1013" y="444" text-anchor="middle" fill="#17211c" font-family="Arial, sans-serif" font-size="13" font-weight="800">EXPORT README</text>
+
+  <text x="66" y="612" fill="#9da7a1" font-family="ui-monospace, Menlo, monospace" font-size="12">0ctacity.github.io/readme-studio</text>
+  <text x="1134" y="612" text-anchor="end" fill="#ed6338" font-family="ui-monospace, Menlo, monospace" font-size="12" font-weight="700">by Octacity</text>
+</svg>
