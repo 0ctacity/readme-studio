@@ -3,6 +3,7 @@ import {
   clearStoredSession,
   fetchRepositoryReadme,
   fetchUserRepositories,
+  prioritizeProfileRepository,
   publishReadmeToRepository,
   type GitHubRepository,
   type GitHubSessionData,
@@ -48,7 +49,10 @@ export function GitHubModal(props: GitHubModalProps) {
     setLoadingRepos(true);
     setErrorMessage(null);
     try {
-      const repos = await fetchUserRepositories(session.token);
+      const repos = prioritizeProfileRepository(
+        await fetchUserRepositories(session.token),
+        session.user.login,
+      );
       setRepositories(repos);
       if (repos.length > 0 && !selectedRepo()) {
         setSelectedRepo(repos[0]);

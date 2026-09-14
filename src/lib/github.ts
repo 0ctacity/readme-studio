@@ -135,6 +135,24 @@ function normalizeRepository(repository: WorkerGitHubRepository): GitHubReposito
   };
 }
 
+export function prioritizeProfileRepository(
+  repositories: readonly GitHubRepository[],
+  login: string,
+): readonly GitHubRepository[] {
+  const normalizedLogin = login.toLowerCase();
+  const profileIndex = repositories.findIndex((repository) =>
+    repository.owner.login.toLowerCase() === normalizedLogin
+      && repository.name.toLowerCase() === normalizedLogin,
+  );
+  if (profileIndex <= 0) return repositories;
+
+  return [
+    repositories[profileIndex],
+    ...repositories.slice(0, profileIndex),
+    ...repositories.slice(profileIndex + 1),
+  ];
+}
+
 function getLocalStorage(): { getItem: (k: string) => string | null; setItem: (k: string, v: string) => void; removeItem: (k: string) => void } {
   if (typeof window !== 'undefined' && window.localStorage) {
     return window.localStorage;

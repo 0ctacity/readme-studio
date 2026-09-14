@@ -7,6 +7,7 @@ import {
   getApiBaseUrl,
   getStoredSession,
   handleOAuthCallback,
+  prioritizeProfileRepository,
   publishReadmeToRepository,
   saveStoredSession,
   type GitHubSessionData,
@@ -49,6 +50,31 @@ function restoreGlobal<K extends 'fetch' | 'window'>(key: K, value: typeof globa
 }
 
 describe('GitHub client library', () => {
+  test('moves the signed-in user profile repository to the top', () => {
+    const repository = {
+      archived: false,
+      default_branch: 'main',
+      description: null,
+      fork: false,
+      html_url: 'https://github.com/octocat/example',
+      owner: { login: 'octocat' },
+      private: false,
+      pushed_at: '2026-09-13T00:00:00Z',
+    };
+    const repositories = [
+      { ...repository, full_name: 'octocat/newest', id: 1, name: 'newest' },
+      { ...repository, full_name: 'octocat/octocat', id: 2, name: 'octocat' },
+      { ...repository, full_name: 'octocat/older', id: 3, name: 'older' },
+    ];
+
+    expect(prioritizeProfileRepository(repositories, 'OctoCat').map((repo) => repo.name)).toEqual([
+      'octocat',
+      'newest',
+      'older',
+    ]);
+    expect(repositories.map((repo) => repo.name)).toEqual(['newest', 'octocat', 'older']);
+  });
+
   test('generates valid PKCE pair and state', async () => {
     const { verifier, challenge, state } = await generatePkcePair();
     expect(verifier).toBeString();
